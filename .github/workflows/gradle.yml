@@ -47,6 +47,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.EC2_KEY }} # ssh key
-          script: |
+          script: | # 실행권한
             cd /etc/nginx/deploy
+            chmod +x /etc/nginx/deploy/deploy.sh 
             ./deploy.sh
