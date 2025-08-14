@@ -11,5 +11,4 @@ public class HealthCheckController {
     public Mono<String> healthCheck() {
         return Mono.just("OK");
     }
-
 }
