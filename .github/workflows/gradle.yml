@@ -49,5 +49,5 @@ jobs:
           key: ${{ secrets.EC2_KEY }} # ssh key
           script: | # 실행권한
             cd /etc/nginx/deploy
-            chmod +x /etc/nginx/deploy/deploy.sh 
-            ./deploy.sh
+            sudo chmod +x deploy.sh
+            sudo ./deploy.sh
