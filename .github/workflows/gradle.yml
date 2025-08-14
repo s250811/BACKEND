@@ -3,7 +3,7 @@ name: Blue-Green Deploy
 on:
   push:
     branches:
-      - dev
+      - develop
 
 jobs:
   deploy:
