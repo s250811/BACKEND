@@ -9,6 +9,6 @@ public class HealthCheckController {
 
     @GetMapping("/health")
     public Mono<String> healthCheck() {
-        return Mono.just("OK");
+        return Mono.just("OK12");
     }
 }
