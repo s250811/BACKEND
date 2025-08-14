@@ -51,8 +51,7 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_KEY }} # ssh key
           script: | # 실행권한
-            export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
-            export DOCKERHUB_DEV_TOKEN=${{ secrets.DOCKERHUB_DEV_TOKEN }}
+            sudo docker login --username ${{ secrets.DOCKERHUB_DEV_USERNAME }} --password ${{ secrets.DOCKERHUB_DEV_TOKEN }}
             cd /etc/nginx/deploy
             sudo chmod +x deploy.sh
             sudo ./deploy.sh
