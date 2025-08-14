@@ -42,7 +42,8 @@ jobs:
 
       # 5. EC2로 SSH 접속 & 배포 스크립트 실행
       # docker-compose 수정
-      # access Denied Docker Passing Docker Token - nginx.conf2
+      # access Denied Docker Passing Docker Token - nginx.conf
+      # export DockerHub_Token
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.1.0
         with:
@@ -50,6 +51,8 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_KEY }} # ssh key
           script: | # 실행권한
+            export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+            export DOCKERHUB_DEV_TOKEN=${{ secrets.DOCKERHUB_DEV_TOKEN }}
             cd /etc/nginx/deploy
             sudo chmod +x deploy.sh
             sudo ./deploy.sh
