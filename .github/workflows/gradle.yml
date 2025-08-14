@@ -40,16 +40,6 @@ jobs:
       - name: Push Docker image
         run: docker push ${{ secrets.DOCKERHUB_DEV_USERNAME }}/myapp:latest
 
-      # 4. docker-compose.yml 파일 생성
-      - name: Copy docker-compose.yml to EC2
-        uses: appleboy/scp-action@v0.1.5
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ec2-user
-          key: ${{ secrets.EC2_KEY }}
-          source: "docker-compose.yml"
-          target: "/etc/nginx/deploy/docker-compose.yml"
-
       # 5. EC2로 SSH 접속 & 배포 스크립트 실행
       # docker-compose 수정
       - name: Deploy to EC2
