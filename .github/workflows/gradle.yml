@@ -1,0 +1,43 @@
+name: Blue-Green Deploy
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Pull Latest Docker Image
+        run: |
+          sudo docker login --username ${{secrets.DOCKERHUB_DEV_USERNAME}} --password ${{secrets.DOCKERHUB_DEV_TOKEN}}
+          sudo docker pull yikanghee2/myapp:latest
+
+      - name: Docker Compose
+        run: |
+          /etc/nginx/deploy/deploy.sh
+          sudo docker image prune -af
+
+      - uses: actions/checkout@v4
+
+      - name: Send files to EC2
+        uses: appleboy/scp-action@v0.1.5
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_KEY }}
+          source: "."
+          target: "/home/ec2-user/app"
+
+      - name: SSH to EC2
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            cd /home/ec2-user/app
+            chmod +x deploy.sh
+            ./deploy.sh
