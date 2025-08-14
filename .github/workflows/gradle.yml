@@ -10,34 +10,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Pull Latest Docker Image
-        run: |
-          sudo docker login --username ${{secrets.DOCKERHUB_DEV_USERNAME}} --password ${{secrets.DOCKERHUB_DEV_TOKEN}}
-          sudo docker pull yikanghee2/myapp:latest
-
-      - name: Docker Compose
-        run: |
-          /etc/nginx/deploy/deploy.sh
-          sudo docker image prune -af
-
       - uses: actions/checkout@v4
 
-      - name: Send files to EC2
-        uses: appleboy/scp-action@v0.1.5
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ec2-user
-          key: ${{ secrets.EC2_KEY }}
-          source: "."
-          target: "/home/ec2-user/app"
+      # 1. Docker Hub 로그인
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKERHUB_DEV_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_DEV_USERNAME }}" --password-stdin
 
-      - name: SSH to EC2
+      # 2. Docker 이미지 빌드
+      - name: Build Docker image
+        run: docker build -t ${{ secrets.DOCKERHUB_DEV_USERNAME }}/myapp:latest .
+
+      # 3. Docker 이미지 푸시
+      - name: Push Docker image
+        run: docker push ${{ secrets.DOCKERHUB_DEV_USERNAME }}/myapp:latest
+
+      # 4. EC2로 SSH 접속 & 배포 스크립트 실행
+      - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.1.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.EC2_KEY }}
           script: |
-            cd /home/ec2-user/app
-            chmod +x deploy.sh
+            cd /etc/nginx/deploy
             ./deploy.sh
