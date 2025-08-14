@@ -42,7 +42,7 @@ jobs:
 
       # 5. EC2로 SSH 접속 & 배포 스크립트 실행
       # docker-compose 수정
-      # access Denied Docker Passing Docker Token - nginx.conf
+      # access Denied Docker Passing Docker Token - nginx.conf2
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.1.0
         with:
