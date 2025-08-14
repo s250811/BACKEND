@@ -1,9 +1,9 @@
 services:
   dev1:
-    image: yikanghee2/my-app:latest
+    image: yikanghee2/myapp:latest
     ports:
       - "8080:8080"
   dev2:
-    image: yikanghee2/my-app:latest
+    image: yikanghee2/myapp:latest
     ports:
       - "8081:8080"
