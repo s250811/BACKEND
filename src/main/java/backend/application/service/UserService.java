@@ -1,6 +1,6 @@
 package backend.application.service;
 
-import backend.application.port.in.RegisterUserUseCase;
+import backend.application.port.in.UserUseCase;
 import backend.application.port.out.EmailServicePort;
 import backend.application.port.out.TokenServicePort;
 import backend.application.port.out.UserRepositoryPort;
@@ -17,7 +17,7 @@ import reactor.core.publisher.Mono;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class UserApplicationService implements RegisterUserUseCase {
+public class UserService implements UserUseCase {
 
     private final UserRepositoryPort userRepository;
     private final EmailServicePort emailService;
@@ -67,7 +67,7 @@ public class UserApplicationService implements RegisterUserUseCase {
     }
 
     private RegisterUserResult toRegisterResult(User user) {
-        return new RegisterUserUseCase.RegisterUserResult(
+        return new UserUseCase.RegisterUserResult(
                 user.getId().getValue().toString(),
                 user.getEmail().getValue(),
                 user.getNickname().getValue()

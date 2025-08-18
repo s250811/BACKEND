@@ -9,8 +9,7 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 /**
- * 이메일 전송 기능 out port 구현체 (port → jpaRepository 호출)
- * 인증 코드와 매직 링크를 포함한 이메일을 전송합니다.
+ * 이메일 전송 기능 out port 구현체 (port → repository 호출)
  */
 @Slf4j
 @Component

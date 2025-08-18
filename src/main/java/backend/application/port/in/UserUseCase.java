@@ -2,7 +2,7 @@ package backend.application.port.in;
 
 import reactor.core.publisher.Mono;
 
-public interface RegisterUserUseCase {
+public interface UserUseCase {
 
     record RegisterUserCommand(
             String email,

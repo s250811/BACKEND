@@ -1,6 +1,6 @@
 package backend.adapter.in.web;
 
-import backend.application.port.in.RegisterUserUseCase;
+import backend.application.port.in.UserUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -18,19 +18,19 @@ import jakarta.validation.constraints.Pattern;
 @RequiredArgsConstructor
 public class UserController {
 
-    private final RegisterUserUseCase registerUserUseCase;
+    private final UserUseCase userUseCase;
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<RegisterUserResponse> register(@Valid @RequestBody RegisterUserRequest request) {
-        RegisterUserUseCase.RegisterUserCommand command =
-                new RegisterUserUseCase.RegisterUserCommand(
+        UserUseCase.RegisterUserCommand command =
+                new UserUseCase.RegisterUserCommand(
                         request.email(),
                         request.password(),
                         request.nickname()
                 );
 
-        return registerUserUseCase.register(command)
+        return userUseCase.register(command)
                 .map(result -> new RegisterUserResponse(
                         result.userId(),
                         result.email(),

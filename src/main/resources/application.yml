@@ -5,6 +5,11 @@ spring:
     url: r2dbc:postgresql://localhost:5432/
     username: ${R2DBC_USERNAME}
     password: ${R2DBC_PASSWORD}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
   mail:
     host: smtp.gmail.com
     port: 587
@@ -16,8 +21,10 @@ spring:
           auth: true
           starttls:
             enable: true
+
 server:
   port: 8080
+
 management:
   endpoint:
     health:
@@ -29,8 +36,9 @@ management:
 
 jwt:
   secret: ${JWT_SECRET:myVerySecretKeyThatIsAtLeast256BitsLongForHS256Algorithm}
-  access-token-expiration: ${JWT_ACCESS_EXPIRATION:86400000} # 24시간
-  magic-link-expiration: ${JWT_MAGIC_EXPIRATION:600000}      # 10분
+  access-token-expiration: ${JWT_ACCESS_EXPIRATION:900000}       # 15분
+  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:2592000000} # 30일
+  magic-link-expiration: ${JWT_MAGIC_EXPIRATION:600000}          # 10분
 
 logging:
   level:

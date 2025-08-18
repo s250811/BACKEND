@@ -7,5 +7,5 @@ public interface UserRepositoryPort {
     Mono<User> save(User user);
     Mono<User> findById(UserId userId);
     Mono<User> findByEmail(Email email);
-    Mono<Boolean> existsByEmail(Email email);
+    Mono<Boolean> existsByEmail(Email emailVO);
 }

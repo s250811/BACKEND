@@ -1,10 +1,13 @@
 package backend.adapter.in.web;
 
-import backend.application.port.in.LoginUserUseCase;
-import backend.application.port.in.SendMagicLinkUseCase;
+import backend.application.port.in.AuthUseCase;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -18,47 +21,103 @@ import jakarta.validation.constraints.NotBlank;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final LoginUserUseCase loginUserUseCase;
-    private final SendMagicLinkUseCase sendMagicLinkUseCase;
+    private final AuthUseCase authUseCase;
 
     @PostMapping("/login")
-    public Mono<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        LoginUserUseCase.LoginCommand command =
-                new LoginUserUseCase.LoginCommand(
-                        request.email(),
-                        request.password(),
-                        request.rememberMe()
-                );
+    public Mono<ResponseEntity<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
+        var command = new AuthUseCase.LoginCommand(
+                request.email(), request.password(), request.rememberMe()
+        );
+        return authUseCase.login(command)
+                .map(result -> {
+                    ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", result.refreshToken())
+                            .httpOnly(true).secure(true).sameSite("Strict")
+                            .maxAge(result.refreshTokenExpiration() / 1000)
+                            .path("/").build();
+                    LoginResponse response = new LoginResponse(
+                            result.accessToken(), result.userId(), result.email(), result.nickname()
+                    );
+                    return ResponseEntity.ok()
+                            .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
+                            .body(response);
+                });
+    }
 
-        return loginUserUseCase.login(command)
-                .map(result -> new LoginResponse(
-                        result.accessToken(),
-                        result.userId(),
-                        result.email(),
-                        result.nickname()
-                ));
+    @PostMapping("/refresh")
+    public Mono<ResponseEntity<RefreshResponse>> refresh(ServerWebExchange exchange) {
+        String refreshToken = extractRefreshTokenFromCookie(exchange);
+        if (refreshToken == null) {
+            return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+        }
+        return authUseCase.refresh(new AuthUseCase.RefreshCommand(refreshToken))
+                .map(result -> {
+                    var cookie = ResponseCookie.from("refreshToken", result.refreshToken())
+                            .httpOnly(true).secure(true).sameSite("Strict")
+                            .maxAge(result.refreshTokenExpiration() / 1000)
+                            .path("/").build();
+                    return ResponseEntity.ok()
+                            .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                            .body(new RefreshResponse(result.accessToken()));
+                })
+                .onErrorReturn(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    @PostMapping("/logout")
+    public Mono<ResponseEntity<Void>> logout(ServerWebExchange exchange) {
+        String refreshToken = extractRefreshTokenFromCookie(exchange);
+
+        ResponseCookie expiredCookie = ResponseCookie.from("refreshToken", "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")
+                .maxAge(0)
+                .path("/")
+                .build();
+
+        if (refreshToken != null) {
+            return authUseCase.logout(new AuthUseCase.LogoutCommand(refreshToken))
+                    .then(Mono.just(ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, expiredCookie.toString()).build()));
+        }
+        return Mono.just(ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, expiredCookie.toString()).build());
     }
 
     @PostMapping("/magic-link")
     @ResponseStatus(HttpStatus.OK)
     public Mono<MagicLinkResponse> sendMagicLink(@Valid @RequestBody MagicLinkRequest request) {
-        SendMagicLinkUseCase.SendMagicLinkCommand command = new SendMagicLinkUseCase.SendMagicLinkCommand(request.email());
-
-        return sendMagicLinkUseCase.sendMagicLink(command)
+        AuthUseCase.SendMagicLinkCommand command = new AuthUseCase.SendMagicLinkCommand(request.email());
+        return authUseCase.sendMagicLink(command)
                 .map(result -> new MagicLinkResponse(result.message(), result.sent()));
     }
 
     @GetMapping("/magic-login")
-    public Mono<LoginResponse> verifyMagicLink(@RequestParam String token) {
-        SendMagicLinkUseCase.VerifyMagicLinkCommand command = new SendMagicLinkUseCase.VerifyMagicLinkCommand(token);
+    public Mono<ResponseEntity<LoginResponse>> verifyMagicLink(@RequestParam String token) {
+        AuthUseCase.VerifyMagicLinkCommand command = new AuthUseCase.VerifyMagicLinkCommand(token);
 
-        return sendMagicLinkUseCase.verifyMagicLink(command)
-                .map(result -> new LoginResponse(
-                        result.accessToken(),
-                        result.userId(),
-                        result.email(),
-                        result.nickname()
-                ));
+        return authUseCase.verifyMagicLink(command)
+                .map(result -> {
+                    ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", result.refreshToken())
+                            .httpOnly(true)
+                            .secure(true)
+                            .sameSite("Strict")
+                            .maxAge(result.refreshTokenExpiration() / 1000)
+                            .path("/")
+                            .build();
+
+                    LoginResponse response = new LoginResponse(
+                            result.accessToken(),
+                            result.userId(),
+                            result.email(),
+                            result.nickname()
+                    );
+
+                    return ResponseEntity.ok()
+                            .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                            .body(response);
+                });
+    }
+
+    private String extractRefreshTokenFromCookie(ServerWebExchange exchange) {
+        return exchange.getRequest().getCookies().getFirst("refreshToken").getValue();
     }
 
     public record LoginRequest(
@@ -73,6 +132,8 @@ public class AuthController {
             String email,
             String nickname
     ) {}
+
+    public record RefreshResponse(String accessToken) {}
 
     public record MagicLinkRequest(@NotBlank @Email String email) {}
 
