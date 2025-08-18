@@ -32,7 +32,7 @@ dependencies {
 
     // Database - R2DBC (Reactive)
     implementation 'org.springframework.boot:spring-boot-starter-data-r2dbc'
-    runtimeOnly 'io.r2dbc:r2dbc-postgresql'
+    runtimeOnly 'org.postgresql:r2dbc-postgresql'
 
     // JWT Authentication
     implementation 'io.jsonwebtoken:jjwt-api:0.12.3'

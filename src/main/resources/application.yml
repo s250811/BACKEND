@@ -1,16 +1,38 @@
 spring:
-  datasource:
-    url: jdbc:postgresql://database-1.c5e2usce6r1z.ap-northeast-2.rds.amazonaws.com:5432/pmDatabase
-    username: postgres
-    password: postgres
-    driver-class-name: org.postgresql.Driver
+  application:
+    name: BACKEND
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/
+    username: ${R2DBC_USERNAME}
+    password: ${R2DBC_PASSWORD}
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+server:
+  port: 8080
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: health
 
+jwt:
+  secret: ${JWT_SECRET:myVerySecretKeyThatIsAtLeast256BitsLongForHS256Algorithm}
+  access-token-expiration: ${JWT_ACCESS_EXPIRATION:86400000} # 24시간
+  magic-link-expiration: ${JWT_MAGIC_EXPIRATION:600000}      # 10분
 
-  jpa:
-      hibernate:
-          ddl-auto: create
-      show-sql: true
-      properties:
-          hibernate:
-          format_sql: true
-          use_sql_comments: true
+logging:
+  level:
+    backend: DEBUG
+    org.springframework.r2dbc: DEBUG
