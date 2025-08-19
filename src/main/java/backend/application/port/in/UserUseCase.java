@@ -16,5 +16,16 @@ public interface UserUseCase {
             String nickname
     ) {}
 
+    record VerifyEmailCommand(
+            String email,
+            String code
+    ) {}
+
+    record VerifyEmailResult(
+            String message,
+            boolean verified
+    ) {}
+
     Mono<RegisterUserResult> register(RegisterUserCommand command);
+    Mono<VerifyEmailResult> verifyEmail(VerifyEmailCommand command);
 }

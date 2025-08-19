@@ -38,6 +38,16 @@ public class UserController {
                 ));
     }
 
+    @PostMapping("/verify-email")
+    @ResponseStatus(HttpStatus.OK)
+    public Mono<VerifyEmailResponse> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        UserUseCase.VerifyEmailCommand command =
+                new UserUseCase.VerifyEmailCommand(request.email(), request.code());
+
+        return userUseCase.verifyEmail(command)
+                .map(result -> new VerifyEmailResponse(result.message(), result.verified()));
+    }
+
     public record RegisterUserRequest(
             @NotBlank @Email String email,
             @NotBlank
@@ -55,4 +65,12 @@ public class UserController {
             String email,
             String nickname
     ) {}
+    public record VerifyEmailRequest(
+            @NotBlank @Email String email,
+            @NotBlank
+            @Pattern(regexp = "^\\d{6}$", message = "인증코드는 6자리 숫자여야 합니다.")
+            String code
+    ) {}
+
+    public record VerifyEmailResponse(String message, boolean verified) {}
 }

@@ -31,6 +31,7 @@ public class JwtTokenAdapter implements TokenServicePort {
     private static final String REFRESH_TOKEN_TYPE = "refresh";
     private static final String EMAIL_CLAIM = "email";
     private static final String TYPE_CLAIM = "type";
+    private static final String VERIFICATION_CODE_PREFIX = "verification_code:";
 
     private final ReactiveRedisTemplate<String, String> redisTemplate;
 
@@ -145,5 +146,22 @@ public class JwtTokenAdapter implements TokenServicePort {
     @Override
     public String generateVerificationCode() {
         return String.format("%06d", (int) (Math.random() * 1000000));
+    }
+    @Override
+    public Mono<Void> storeVerificationCode(String email, String code, long expirationMs) {
+        String key = VERIFICATION_CODE_PREFIX + email;
+        Duration ttl = Duration.ofMillis(expirationMs);
+        return redisTemplate.opsForValue().set(key, code, ttl).then();
+    }
+
+    @Override
+    public Mono<String> getVerificationCode(String email) {
+        String key = VERIFICATION_CODE_PREFIX + email;
+        return redisTemplate.opsForValue().get(key);
+    }
+    @Override
+    public Mono<Void> deleteVerificationCode(String email) {
+        String key = VERIFICATION_CODE_PREFIX + email;
+        return redisTemplate.delete(key).then();
     }
 }

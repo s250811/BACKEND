@@ -15,4 +15,7 @@ public interface TokenServicePort {
     Mono<Void> storeRefreshToken(String userId, String refreshToken);
     Mono<Boolean> validateRefreshToken(String userId, String refreshToken);
     Mono<Void> deleteRefreshToken(String userId);
+    Mono<Void> storeVerificationCode(String email, String code, long expirationMs);
+    Mono<String> getVerificationCode(String email);
+    Mono<Void> deleteVerificationCode(String email);
 }
