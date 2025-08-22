@@ -2,9 +2,14 @@ spring:
   application:
     name: BACKEND
   r2dbc:
-    url: r2dbc:postgresql://localhost:5432/
+    url: r2dbc:postgresql://database-1.c5e2usce6r1z.ap-northeast-2.rds.amazonaws.com:5432/pmDatabase?sslMode=require
     username: ${R2DBC_USERNAME}
     password: ${R2DBC_PASSWORD}
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+      continue-on-error: false
   data:
     redis:
       host: ${REDIS_HOST:localhost}
