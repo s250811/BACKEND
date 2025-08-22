@@ -1,8 +1,11 @@
 package backend.adapter.in.web;
 
 import backend.application.port.in.UserUseCase;
+import backend.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 import jakarta.validation.Valid;
@@ -48,6 +51,45 @@ public class UserController {
                 .map(result -> new VerifyEmailResponse(result.message(), result.verified()));
     }
 
+    @GetMapping("/profile")
+    public Mono<ResponseEntity<UserProfileResponse>> getProfile() {
+        return SecurityUtils.getCurrentUserId()
+                .flatMap(userUseCase::getUserProfile)
+                .map(result -> ResponseEntity.ok(new UserProfileResponse(
+                        result.userId(),
+                        result.email(),
+                        result.nickname(),
+                        result.profileImageUrl()
+                )))
+                .onErrorReturn(ResponseEntity.badRequest().build());
+    }
+
+    @PutMapping("/profile")
+    public Mono<ResponseEntity<UpdateProfileResponse>> updateProfile(
+            @Pattern(regexp = "^[가-힣a-zA-Z0-9]{1,10}$",
+                    message = "닉네임은 1-10자의 한글, 영문, 숫자만 허용됩니다.")
+            @RequestPart(value = "nickname", required = false) String nickname,
+            @RequestPart(value = "file", required = false) FilePart file) {
+
+        return SecurityUtils.getCurrentUserId()
+                .flatMap(userId -> {
+                    var command = new UserUseCase.UpdateProfileCommand(
+                            userId,
+                            nickname,
+                            file
+                    );
+                    return userUseCase.updateProfile(command);
+                })
+                .map(result -> ResponseEntity.ok(new UpdateProfileResponse(
+                        result.userId(),
+                        result.email(),
+                        result.nickname(),
+                        result.profileImageUrl()
+                )))
+                .onErrorReturn(ResponseEntity.badRequest().build());
+    }
+
+
     public record RegisterUserRequest(
             @NotBlank @Email String email,
             @NotBlank
@@ -73,4 +115,21 @@ public class UserController {
     ) {}
 
     public record VerifyEmailResponse(String message, boolean verified) {}
+
+    public record UserProfileResponse(
+            String userId,
+            String email,
+            @NotBlank
+            @Pattern(regexp = "^[가-힣a-zA-Z0-9]{1,10}$",
+                    message = "닉네임은 1-10자의 한글, 영문, 숫자만 허용됩니다.")
+            String nickname,
+            String profileImageUrl
+    ) {}
+
+    public record UpdateProfileResponse(
+            String userId,
+            String email,
+            String nickname,
+            String profileImageUrl
+    ) {}
 }

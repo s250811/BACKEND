@@ -21,6 +21,13 @@ spring:
           auth: true
           starttls:
             enable: true
+aws:
+  s3:
+    bucket: ${AWS_S3_BUCKET}
+    region: ${AWS_REGION:ap-northeast-2}
+    access-key: ${AWS_ACCESS_KEY}
+    secret-key: ${AWS_SECRET_KEY}
+    base-url: https://${aws.s3.bucket}.s3.${aws.s3.region}.amazonaws.com
 server:
   port: 8080
 management:

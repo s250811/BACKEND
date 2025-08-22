@@ -164,4 +164,7 @@ public class JwtTokenAdapter implements TokenServicePort {
         String key = VERIFICATION_CODE_PREFIX + email;
         return redisTemplate.delete(key).then();
     }
+    public String generateRandomNickname() {
+        return UUID.randomUUID().toString().replace("-", "");
+    }
 }
