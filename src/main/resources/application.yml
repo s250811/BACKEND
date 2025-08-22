@@ -1,16 +1,56 @@
 spring:
-  datasource:
-    url: jdbc:postgresql://database-1.c5e2usce6r1z.ap-northeast-2.rds.amazonaws.com:5432/pmDatabase
-    username: postgres
-    password: postgres
-    driver-class-name: org.postgresql.Driver
-
-
-  jpa:
-      hibernate:
-          ddl-auto: create
-      show-sql: true
-      properties:
-          hibernate:
-          format_sql: true
-          use_sql_comments: true
+  application:
+    name: BACKEND
+  r2dbc:
+    url: r2dbc:postgresql://database-1.c5e2usce6r1z.ap-northeast-2.rds.amazonaws.com:5432/pmDatabase?sslMode=require
+    username: ${R2DBC_USERNAME}
+    password: ${R2DBC_PASSWORD}
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+      continue-on-error: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+aws:
+  s3:
+    bucket: ${AWS_S3_BUCKET}
+    region: ${AWS_REGION:ap-northeast-2}
+    access-key: ${AWS_ACCESS_KEY}
+    secret-key: ${AWS_SECRET_KEY}
+    base-url: https://${aws.s3.bucket}.s3.${aws.s3.region}.amazonaws.com
+server:
+  port: 8080
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: health
+jwt:
+  secret: ${JWT_SECRET:myVerySecretKeyThatIsAtLeast256BitsLongForHS256Algorithm}
+  access-token-expiration: ${JWT_ACCESS_EXPIRATION:900000}       # 15분
+  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:2592000000} # 30일
+  magic-link-expiration: ${JWT_MAGIC_EXPIRATION:600000}          # 10분
+verification:
+  code-expiration: ${VERIFICATION_CODE_EXPIRATION:60000}          # 1분 (인증코드 만료기간)
+logging:
+  level:
+    backend: DEBUG
+    org.springframework.r2dbc: DEBUG
