@@ -84,9 +84,10 @@ public class AuthService implements AuthUseCase {
     public Mono<Void> sendMagicLink(SendMagicLinkCommand command) {
         Email email = new Email(command.email());
 
-        return userRepository.findByEmail(email)
+        return userRepository.existsByEmail(email)
+                .filter(exists -> exists)
                 .switchIfEmpty(Mono.error(new IllegalArgumentException("존재하지 않는 이메일 주소입니다.")))
-                .flatMap(user -> createAndSendMagicLink(email));
+                .then(createAndSendMagicLink(email));
     }
 
     @Override
