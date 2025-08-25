@@ -18,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -53,7 +52,7 @@ public class UserService implements UserUseCase {
             String encodedPassword = password.encode(passwordEncoder);
             Password encodedPasswordVO = new Password(encodedPassword);
             String nicknameValue = (command.nickname() == null || command.nickname().trim().isEmpty())
-                    ? tokenService.generateRandomNickname() : command.nickname();
+                    ? Nickname.generateRandomNickname() : command.nickname();
             Nickname nickname = new Nickname(nicknameValue);
             return User.create(email, encodedPasswordVO, nickname);
         });
@@ -74,7 +73,7 @@ public class UserService implements UserUseCase {
     @Cacheable(value = "user:profile", key = "#userId")
     @Transactional(readOnly = true)
     public Mono<UserProfileResult> getUserProfile(String userId) {
-        return userRepository.findById(UserId.of(UUID.fromString(userId)))
+        return userRepository.findById(UserId.of(Long.valueOf(userId)))
                 .map(user -> new UserProfileResult(
                         user.getId().getValue().toString(),
                         user.getEmail().getValue(),
@@ -86,7 +85,7 @@ public class UserService implements UserUseCase {
     @CacheEvict(value = "user:profile", key = "#command.userId")
     @Transactional
     public Mono<UpdateProfileResult> updateProfile(UpdateProfileCommand command) {
-        return userRepository.findById(UserId.of(UUID.fromString(command.userId())))
+        return userRepository.findById(UserId.of(Long.valueOf(command.userId())))
                 .switchIfEmpty(Mono.error(new IllegalArgumentException("사용자를 찾을 수 없습니다.")))
                 .flatMap(user -> {
                     String oldImageUrl = user.getProfileImageUrl();

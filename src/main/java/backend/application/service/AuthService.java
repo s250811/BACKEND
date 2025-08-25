@@ -54,7 +54,7 @@ public class AuthService implements AuthUseCase {
                     if (!isValid) {
                         return Mono.error(new IllegalArgumentException("Invalid refresh token"));
                     }
-                    return userRepository.findById(UserId.of(java.util.UUID.fromString(userId)));
+                    return userRepository.findById(UserId.of(Long.valueOf(userId)));
                 })
                 .flatMap(user -> {
                     String newAccessToken = tokenService.generateAccessToken(

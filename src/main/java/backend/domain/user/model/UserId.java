@@ -8,12 +8,8 @@ import java.util.UUID;
 
 @Value
 public class UserId extends ValueObject {
-    UUID value;
-
-    public static UserId generate() {
-        return new UserId(UUID.randomUUID());
-    }
-    public static UserId of(UUID id) {
+    Long value;
+    public static UserId of(Long id) {
         return new UserId(id);
     }
 }

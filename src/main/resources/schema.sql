@@ -1,7 +1,7 @@
 -- User 테이블
 CREATE TABLE IF NOT EXISTS "user" (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email VARCHAR(255) NOT NULL UNIQUE,
+                                      id BIGSERIAL PRIMARY KEY,
+                                      email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     nickname VARCHAR(10) NOT NULL,
     profile_image_url TEXT,
@@ -15,7 +15,7 @@ CREATE INDEX IF NOT EXISTS idx_user_created_at ON "user"(created_at);
 
 -- Magic Link Token 테이블
 CREATE TABLE IF NOT EXISTS magic_link_token (
-                                                id UUID PRIMARY KEY,
+                                                id BIGSERIAL PRIMARY KEY,
                                                 email VARCHAR(255) NOT NULL,
     token VARCHAR(500) NOT NULL UNIQUE,
     expires_at TIMESTAMP NOT NULL,
