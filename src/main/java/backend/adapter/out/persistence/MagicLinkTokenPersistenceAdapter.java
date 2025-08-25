@@ -50,6 +50,8 @@ public class MagicLinkTokenPersistenceAdapter implements MagicLinkTokenRepositor
                 .token(entity.getToken())
                 .expiresAt(entity.getExpiresAt())
                 .used(entity.isUsed())
+                .createdAt(entity.getCreatedAt())
+                .updatedAt(entity.getUpdatedAt())
                 .build();
     }
 }

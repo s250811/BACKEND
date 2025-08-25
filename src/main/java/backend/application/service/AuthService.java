@@ -4,6 +4,7 @@ import backend.application.port.in.AuthUseCase;
 import backend.application.port.out.*;
 import backend.domain.user.model.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,9 @@ public class AuthService implements AuthUseCase {
 
     @Value("${jwt.magic-link-expiration:600000}")
     private long magicLinkExpirationMs;
+
+    @Value("${verification.code-expiration:60000}")
+    private long codeExpirationMs;
 
     @Override
     public Mono<LoginResult> login(LoginCommand command) {
@@ -77,14 +81,12 @@ public class AuthService implements AuthUseCase {
     }
 
     @Override
-    public Mono<SendMagicLinkResult> sendMagicLink(SendMagicLinkCommand command) {
+    public Mono<Void> sendMagicLink(SendMagicLinkCommand command) {
         Email email = new Email(command.email());
 
         return userRepository.findByEmail(email)
                 .switchIfEmpty(Mono.error(new IllegalArgumentException("존재하지 않는 이메일 주소입니다.")))
-                .flatMap(user -> createAndSendMagicLink(email))
-                .map(unused -> new SendMagicLinkResult("로그인 링크가 이메일로 전송되었습니다.", true))
-                .onErrorReturn(new SendMagicLinkResult("메일 전송에 실패했습니다.", false));
+                .flatMap(user -> createAndSendMagicLink(email));
     }
 
     @Override
@@ -141,10 +143,11 @@ public class AuthService implements AuthUseCase {
         return magicLinkTokenRepository.deleteByEmail(email)
                 .then(Mono.fromCallable(() -> {
                     String token = tokenService.generateMagicLinkToken();
-                    return MagicLinkToken.create(email, token, magicLinkExpirationMs / 60000L);
+                    return MagicLinkToken.create(email, token,magicLinkExpirationMs / 60000L);
                 }))
                 .flatMap(magicLinkTokenRepository::save)
                 .flatMap(token -> {
+                    // TODO: 도메인 확정 시 하드코딩된 localhost URL 변경 필요
                     String magicLink = "http://localhost:3000/auth/magic-login?token=" + token.getToken();
                     return emailService.sendMagicLinkEmail(email.getValue(), magicLink);
                 });
@@ -157,4 +160,25 @@ public class AuthService implements AuthUseCase {
         token.markAsUsed();
         return magicLinkTokenRepository.save(token);
     }
+
+    @Override
+    public Mono<SendVerificationCodeResult> sendVerificationCode(SendVerificationCodeCommand command) {
+        Email email = new Email(command.email());
+
+        return checkEmailNotExists(email)
+                .then(Mono.defer(() -> {
+                    String code = tokenService.generateVerificationCode();
+                    return tokenService.storeVerificationCode(email.getValue(), code, codeExpirationMs)
+                            .then(emailService.sendVerificationEmail(email.getValue(), code))
+                            .thenReturn(new SendVerificationCodeResult(code));
+                }));
+    }
+
+    private Mono<Void> checkEmailNotExists(Email email) {
+        return userRepository.existsByEmail(email)
+                .flatMap(exists -> exists
+                        ? Mono.error(new IllegalArgumentException("이미 가입된 이메일입니다."))
+                        : Mono.empty());
+    }
+
 }

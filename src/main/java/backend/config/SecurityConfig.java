@@ -30,7 +30,8 @@ public class SecurityConfig {
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .addFilterAt(jwtFilter, SecurityWebFiltersOrder.AUTHENTICATION)
                 .authorizeExchange(exchanges -> exchanges
-                        .pathMatchers("/api/auth/**", "/api/users/register", "/api/users/verify-email").permitAll()                        .pathMatchers("/actuator/**").permitAll()
+                        .pathMatchers("/api/v1/auth/**", "/api/v1/users/register").permitAll()
+                        .pathMatchers("/actuator/**").permitAll()
                         .anyExchange().authenticated()
                 )
                 .build();

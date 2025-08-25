@@ -17,7 +17,7 @@ import jakarta.validation.constraints.NotBlank;
  * Auth 외부 요청을 받는 진입 지점
  */
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -83,10 +83,10 @@ public class AuthController {
 
     @PostMapping("/magic-link")
     @ResponseStatus(HttpStatus.OK)
-    public Mono<MagicLinkResponse> sendMagicLink(@Valid @RequestBody MagicLinkRequest request) {
+    public Mono<Void> sendMagicLink(@Valid @RequestBody MagicLinkRequest request) {
         AuthUseCase.SendMagicLinkCommand command = new AuthUseCase.SendMagicLinkCommand(request.email());
         return authUseCase.sendMagicLink(command)
-                .map(result -> new MagicLinkResponse(result.message(), result.sent()));
+                .then();
     }
 
     @GetMapping("/magic-login")
@@ -116,6 +116,16 @@ public class AuthController {
                 });
     }
 
+    @PostMapping("/send-code")
+    @ResponseStatus(HttpStatus.OK)
+    public Mono<ResponseEntity<VerificationCodeResponse>> sendVerificationCode(@Valid @RequestBody VerificationCodeRequest request) {
+        return authUseCase.sendVerificationCode(new AuthUseCase.SendVerificationCodeCommand(request.email()))
+                .map(result -> {
+                    VerificationCodeResponse response = new VerificationCodeResponse(request.email(), result.code());
+                    return ResponseEntity.ok(response);
+                });
+    }
+
     private String extractRefreshTokenFromCookie(ServerWebExchange exchange) {
         return exchange.getRequest().getCookies().getFirst("refreshToken").getValue();
     }
@@ -134,8 +144,7 @@ public class AuthController {
     ) {}
 
     public record RefreshResponse(String accessToken) {}
-
     public record MagicLinkRequest(@NotBlank @Email String email) {}
-
-    public record MagicLinkResponse(String message, boolean sent) {}
+    public record VerificationCodeRequest(@NotBlank @Email String email) {}
+    public record VerificationCodeResponse(String email, String code) {}
 }

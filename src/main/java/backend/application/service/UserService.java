@@ -25,32 +25,24 @@ import java.util.UUID;
 @Transactional
 @Slf4j
 public class UserService implements UserUseCase {
-    @Value("${verification.code-expiration:60000}")
-    private long codeExpirationMs;
 
     private final FileStoragePort fileStoragePort;
     private final UserRepositoryPort userRepository;
-    private final EmailServicePort emailService;
     private final TokenServicePort tokenService;
     private final PasswordEncoder passwordEncoder;
 
-    @Override
-    public Mono<RegisterUserResult> register(RegisterUserCommand command) {
-        return validateEmailNotExists(command.email())
-                .then(createUser(command))
-                .flatMap(this::saveUser)
-                .flatMap(this::saveAndSendVerificationCode)
-                .map(this::toRegisterResult);
-    }
-
-    private Mono<Void> validateEmailNotExists(String email) {
-        Email emailVO = new Email(email);
-        return userRepository.existsByEmail(emailVO)
-                .flatMap(exists -> {
-                    if (exists) {
-                        return Mono.error(new IllegalArgumentException("이미 가입된 이메일입니다."));
+    public Mono<RegisterUserResult> register(RegisterUserCommand command, String verificationCode) {
+        return tokenService.getVerificationCode(command.email())
+                .switchIfEmpty(Mono.error(new IllegalArgumentException("인증코드가 만료되었거나 존재하지 않습니다.")))
+                .flatMap(storedCode -> {
+                    if (!storedCode.equals(verificationCode)) {
+                        return Mono.error(new IllegalArgumentException("잘못된 인증코드입니다."));
                     }
-                    return Mono.empty();
+                    return createUser(command)
+                            .flatMap(this::saveUser)
+                            .flatMap(user -> tokenService.deleteVerificationCode(command.email())
+                                    .thenReturn(user))
+                            .map(this::toRegisterResult);
                 });
     }
 
@@ -71,34 +63,12 @@ public class UserService implements UserUseCase {
         return userRepository.save(user);
     }
 
-    private Mono<User> saveAndSendVerificationCode(User user) {
-        String code = tokenService.generateVerificationCode();
-        String email = user.getEmail().getValue();
-
-        return tokenService.storeVerificationCode(email, code, codeExpirationMs)
-                .then(emailService.sendVerificationEmail(email, code))
-                .thenReturn(user);
-    }
-
     private RegisterUserResult toRegisterResult(User user) {
         return new UserUseCase.RegisterUserResult(
                 user.getId().getValue().toString(),
                 user.getEmail().getValue(),
                 user.getNickname().getValue()
         );
-    }
-    @Override
-    public Mono<VerifyEmailResult> verifyEmail(VerifyEmailCommand command) {
-        return tokenService.getVerificationCode(command.email())
-                .switchIfEmpty(Mono.error(new IllegalArgumentException("인증코드가 만료되었거나 존재하지 않습니다.")))
-                .flatMap(storedCode -> {
-                    if (!storedCode.equals(command.code())) {
-                        return Mono.error(new IllegalArgumentException("잘못된 인증코드입니다."));
-                    }
-                    return tokenService.deleteVerificationCode(command.email())
-                            .thenReturn(new VerifyEmailResult("이메일 인증이 완료되었습니다.", true));
-                })
-                .onErrorReturn(new VerifyEmailResult("인증에 실패했습니다.", false));
     }
 
     @Cacheable(value = "user:profile", key = "#userId")

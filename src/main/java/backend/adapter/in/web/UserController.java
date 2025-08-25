@@ -17,7 +17,7 @@ import jakarta.validation.constraints.Pattern;
  * User 외부 요청을 받는 진입 지점
  */
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
 public class UserController {
 
@@ -33,22 +33,12 @@ public class UserController {
                         request.nickname()
                 );
 
-        return userUseCase.register(command)
+        return userUseCase.register(command, request.code())
                 .map(result -> new RegisterUserResponse(
                         result.userId(),
                         result.email(),
                         result.nickname()
                 ));
-    }
-
-    @PostMapping("/verify-email")
-    @ResponseStatus(HttpStatus.OK)
-    public Mono<VerifyEmailResponse> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
-        UserUseCase.VerifyEmailCommand command =
-                new UserUseCase.VerifyEmailCommand(request.email(), request.code());
-
-        return userUseCase.verifyEmail(command)
-                .map(result -> new VerifyEmailResponse(result.message(), result.verified()));
     }
 
     @GetMapping("/profile")
@@ -99,7 +89,10 @@ public class UserController {
             @NotBlank
             @Pattern(regexp = "^[가-힣a-zA-Z0-9]{1,10}$",
                     message = "닉네임은 1-10자의 한글, 영문, 숫자만 허용됩니다.")
-            String nickname
+            String nickname,
+            @NotBlank
+            @Pattern(regexp = "^\\d{6}$", message = "인증코드는 6자리 숫자여야 합니다.")
+            String code
     ) {}
 
     public record RegisterUserResponse(
@@ -107,14 +100,6 @@ public class UserController {
             String email,
             String nickname
     ) {}
-    public record VerifyEmailRequest(
-            @NotBlank @Email String email,
-            @NotBlank
-            @Pattern(regexp = "^\\d{6}$", message = "인증코드는 6자리 숫자여야 합니다.")
-            String code
-    ) {}
-
-    public record VerifyEmailResponse(String message, boolean verified) {}
 
     public record UserProfileResponse(
             String userId,

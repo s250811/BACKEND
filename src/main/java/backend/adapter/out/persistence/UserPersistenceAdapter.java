@@ -54,6 +54,8 @@ public class UserPersistenceAdapter implements UserRepositoryPort {
                 .password(new Password(entity.getPassword()))
                 .nickname(new Nickname(entity.getNickname()))
                 .profileImageUrl(entity.getProfileImageUrl())
+                .createdAt(entity.getCreatedAt())
+                .updatedAt(entity.getUpdatedAt())
                 .build();
     }
 }
