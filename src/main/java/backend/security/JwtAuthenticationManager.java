@@ -33,7 +33,7 @@ public class JwtAuthenticationManager implements ReactiveAuthenticationManager {
             String userId = tokenService.getUserIdFromToken(token);
             String email = tokenService.getEmailFromToken(token);
 
-            return userRepository.findById(UserId.of(UUID.fromString(userId)))
+            return userRepository.findById(UserId.of(Long.valueOf(userId)))
                     .map(user -> new UsernamePasswordAuthenticationToken(
                             new AuthenticatedUser(user.getId().getValue().toString(), email),
                             token,

@@ -37,7 +37,7 @@ public class UserPersistenceAdapter implements UserRepositoryPort {
 
     private UserEntity toEntity(User user) {
         return UserEntity.builder()
-                .id(user.getId().getValue())
+                .id(user.getIdValue())
                 .email(user.getEmail().getValue())
                 .password(user.getPassword().getValue())
                 .nickname(user.getNickname().getValue())
@@ -54,6 +54,8 @@ public class UserPersistenceAdapter implements UserRepositoryPort {
                 .password(new Password(entity.getPassword()))
                 .nickname(new Nickname(entity.getNickname()))
                 .profileImageUrl(entity.getProfileImageUrl())
+                .createdAt(entity.getCreatedAt())
+                .updatedAt(entity.getUpdatedAt())
                 .build();
     }
 }

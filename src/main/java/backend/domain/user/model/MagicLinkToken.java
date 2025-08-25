@@ -12,17 +12,19 @@ public class MagicLinkToken extends AggregateRoot<UUID> {
     private String token;
     private LocalDateTime expiresAt;
     private boolean used;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     @Builder
     public MagicLinkToken(UUID id, Email email, String token,
-                          LocalDateTime expiresAt, boolean used) {
+                          LocalDateTime expiresAt, boolean used, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id != null ? id : UUID.randomUUID();
         this.email = email;
         this.token = token;
         this.expiresAt = expiresAt;
         this.used = used;
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
     }
 
     public static MagicLinkToken create(Email email, String token, long expirationMinutes){

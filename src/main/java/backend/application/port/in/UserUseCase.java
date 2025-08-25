@@ -16,16 +16,6 @@ public interface UserUseCase {
             String nickname
     ) {}
 
-    record VerifyEmailCommand(
-            String email,
-            String code
-    ) {}
-
-    record VerifyEmailResult(
-            String message,
-            boolean verified
-    ) {}
-
     record UserProfileResult(
             String userId,
             String email,
@@ -46,8 +36,7 @@ public interface UserUseCase {
             String profileImageUrl
     ) {}
 
-    Mono<RegisterUserResult> register(RegisterUserCommand command);
-    Mono<VerifyEmailResult> verifyEmail(VerifyEmailCommand command);
+    Mono<RegisterUserResult> register(RegisterUserCommand command, String verificationCode);
     Mono<UserProfileResult>  getUserProfile(String s);
     Mono<UpdateProfileResult> updateProfile(UpdateProfileCommand command);
 }

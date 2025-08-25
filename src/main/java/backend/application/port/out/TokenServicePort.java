@@ -18,5 +18,4 @@ public interface TokenServicePort {
     Mono<Void> storeVerificationCode(String email, String code, long expirationMs);
     Mono<String> getVerificationCode(String email);
     Mono<Void> deleteVerificationCode(String email);
-    String generateRandomNickname();
 }

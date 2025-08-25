@@ -33,7 +33,7 @@ public class JwtTokenAdapter implements TokenServicePort {
     private static final String TYPE_CLAIM = "type";
     private static final String VERIFICATION_CODE_PREFIX = "verification_code:";
 
-    private final ReactiveRedisTemplate<String, String> redisTemplate;
+    private final ReactiveRedisTemplate<String, String> reactiveRedisTemplate;
 
     @Value("${jwt.secret}")
     private String jwtSecret;
@@ -121,13 +121,13 @@ public class JwtTokenAdapter implements TokenServicePort {
     public Mono<Void> storeRefreshToken(String userId, String refreshToken) {
         String key = getRedisKey(userId);
         Duration ttl = Duration.ofMillis(refreshTokenExpiration);
-        return redisTemplate.opsForValue().set(key, refreshToken, ttl).then();
+        return reactiveRedisTemplate.opsForValue().set(key, refreshToken, ttl).then();
     }
 
     @Override
     public Mono<Boolean> validateRefreshToken(String userId, String refreshToken) {
         String key = getRedisKey(userId);
-        return redisTemplate.opsForValue().get(key)
+        return reactiveRedisTemplate.opsForValue().get(key)
                 .map(storedToken -> storedToken.equals(refreshToken) && validateToken(refreshToken))
                 .defaultIfEmpty(false);
     }
@@ -135,7 +135,7 @@ public class JwtTokenAdapter implements TokenServicePort {
     @Override
     public Mono<Void> deleteRefreshToken(String userId) {
         String key = getRedisKey(userId);
-        return redisTemplate.delete(key).then();
+        return reactiveRedisTemplate.delete(key).then();
     }
 
     @Override
@@ -151,20 +151,17 @@ public class JwtTokenAdapter implements TokenServicePort {
     public Mono<Void> storeVerificationCode(String email, String code, long expirationMs) {
         String key = VERIFICATION_CODE_PREFIX + email;
         Duration ttl = Duration.ofMillis(expirationMs);
-        return redisTemplate.opsForValue().set(key, code, ttl).then();
+        return reactiveRedisTemplate.opsForValue().set(key, code, ttl).then();
     }
 
     @Override
     public Mono<String> getVerificationCode(String email) {
         String key = VERIFICATION_CODE_PREFIX + email;
-        return redisTemplate.opsForValue().get(key);
+        return reactiveRedisTemplate.opsForValue().get(key);
     }
     @Override
     public Mono<Void> deleteVerificationCode(String email) {
         String key = VERIFICATION_CODE_PREFIX + email;
-        return redisTemplate.delete(key).then();
-    }
-    public String generateRandomNickname() {
-        return UUID.randomUUID().toString().replace("-", "");
+        return reactiveRedisTemplate.delete(key).then();
     }
 }

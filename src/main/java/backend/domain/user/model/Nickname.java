@@ -2,6 +2,8 @@ package backend.domain.user.model;
 
 import backend.domain.common.ValueObject;
 import lombok.Value;
+
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 @Value
@@ -12,15 +14,11 @@ public class Nickname extends ValueObject {
     String value;
 
     public Nickname(String nickname) {
-        if (nickname == null || nickname.trim().isEmpty()) {
-            throw new IllegalArgumentException("닉네임은 필수입니다.");
-        }
-        if (!NICKNAME_PATTERN.matcher(nickname).matches()) {
-            throw new IllegalArgumentException(
-                    "닉네임은 1-10자의 한글, 영문, 숫자만 허용됩니다."
-            );
-        }
         this.value = nickname.trim();
+    }
+
+    public static String generateRandomNickname() {
+        return UUID.randomUUID().toString().replace("-", "").substring(0, 10);
     }
 }
 

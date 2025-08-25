@@ -23,7 +23,7 @@ public interface AuthUseCase {
 
     record SendMagicLinkCommand(String email) {}
 
-    record SendMagicLinkResult(String message, boolean sent) {}
+    record SendMagicLinkResult(String msg) {}
 
     record VerifyMagicLinkCommand(String token) {}
 
@@ -36,9 +36,13 @@ public interface AuthUseCase {
             String nickname
     ) {}
 
+    record SendVerificationCodeCommand(String email){}
+    record SendVerificationCodeResult(String code){}
+
     Mono<LoginResult> login(LoginCommand command);
     Mono<RefreshResult> refresh(RefreshCommand command);
     Mono<Void> logout(LogoutCommand command);
-    Mono<SendMagicLinkResult> sendMagicLink(SendMagicLinkCommand command);
+    Mono<Void> sendMagicLink(SendMagicLinkCommand command);
     Mono<VerifyMagicLinkResult> verifyMagicLink(VerifyMagicLinkCommand command);
+    Mono<SendVerificationCodeResult> sendVerificationCode(SendVerificationCodeCommand command);
 }
