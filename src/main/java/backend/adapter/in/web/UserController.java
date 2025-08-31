@@ -23,7 +23,7 @@ public class UserController {
 
     private final UserUseCase userUseCase;
 
-    @PostMapping("/register")
+    @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<RegisterUserResponse> register(@Valid @RequestBody RegisterUserRequest request) {
         UserUseCase.RegisterUserCommand command =
@@ -41,7 +41,7 @@ public class UserController {
                 ));
     }
 
-    @GetMapping("/profile")
+    @GetMapping("/me")
     public Mono<ResponseEntity<UserProfileResponse>> getProfile() {
         return SecurityUtils.getCurrentUserId()
                 .flatMap(userUseCase::getUserProfile)
@@ -54,7 +54,7 @@ public class UserController {
                 .onErrorReturn(ResponseEntity.badRequest().build());
     }
 
-    @PutMapping("/profile")
+    @PatchMapping("/me")
     public Mono<ResponseEntity<UpdateProfileResponse>> updateProfile(
             @Pattern(regexp = "^[가-힣a-zA-Z0-9]{1,10}$",
                     message = "닉네임은 1-10자의 한글, 영문, 숫자만 허용됩니다.")

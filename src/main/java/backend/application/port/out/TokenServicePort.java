@@ -6,7 +6,6 @@ import reactor.core.publisher.Mono;
 public interface TokenServicePort {
     String generateAccessToken(String userId, String email);
     String generateRefreshToken(String userId);
-    String generateMagicLinkToken();
     String generateVerificationCode();
     boolean validateToken(String token);
     Claims getClaimsFromToken(String token);

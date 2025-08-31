@@ -16,7 +16,6 @@ import reactor.core.publisher.Mono;
 import javax.crypto.SecretKey;
 import java.time.Duration;
 import java.util.Date;
-import java.util.UUID;
 
 /**
  * JWT 토큰 생성 및 관리 기능 out port 구현체 (port → repository 호출)
@@ -136,11 +135,6 @@ public class JwtTokenAdapter implements TokenServicePort {
     public Mono<Void> deleteRefreshToken(String userId) {
         String key = getRedisKey(userId);
         return reactiveRedisTemplate.delete(key).then();
-    }
-
-    @Override
-    public String generateMagicLinkToken() {
-        return UUID.randomUUID().toString();
     }
 
     @Override
