@@ -1,4 +1,4 @@
-package backend.application.port.out;
+package backend.application.port.out.user;
 
 import io.jsonwebtoken.Claims;
 import reactor.core.publisher.Mono;
