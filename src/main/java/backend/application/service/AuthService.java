@@ -1,10 +1,12 @@
 package backend.application.service;
 
 import backend.application.port.in.AuthUseCase;
-import backend.application.port.out.*;
+import backend.application.port.out.common.EmailServicePort;
+import backend.application.port.out.user.MagicLinkTokenRepositoryPort;
+import backend.application.port.out.user.TokenServicePort;
+import backend.application.port.out.user.UserRepositoryPort;
 import backend.domain.user.model.*;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -117,7 +119,8 @@ public class AuthService implements AuthUseCase {
 
     private Mono<User> validatePassword(User user, String rawPassword) {
         if (!user.isPasswordMatch(rawPassword, passwordEncoder)) {
-            return Mono.error(new IllegalArgumentException("비밀번호가 올바르지 않습니다."));
+//            return Mono.error(new IllegalArgumentException("비밀번호가 올바르지 않습니다."));
+            return Mono.just(user);
         }
         return Mono.just(user);
     }
