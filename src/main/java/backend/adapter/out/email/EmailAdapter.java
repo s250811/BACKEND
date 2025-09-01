@@ -1,6 +1,6 @@
 package backend.adapter.out.email;
 
-import backend.application.port.out.EmailServicePort;
+import backend.application.port.out.common.EmailServicePort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.SimpleMailMessage;
@@ -41,4 +41,5 @@ public class EmailAdapter implements EmailServicePort {
             log.info("Magic link email sent to: {}", to);
         });
     }
+
 }

@@ -1,14 +1,12 @@
 package backend.application.service;
 
 import backend.application.port.in.UserUseCase;
-import backend.application.port.out.EmailServicePort;
-import backend.application.port.out.FileStoragePort;
-import backend.application.port.out.TokenServicePort;
-import backend.application.port.out.UserRepositoryPort;
+import backend.application.port.out.common.FileStoragePort;
+import backend.application.port.out.user.TokenServicePort;
+import backend.application.port.out.user.UserRepositoryPort;
 import backend.domain.user.model.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -81,6 +79,7 @@ public class UserService implements UserUseCase {
                         user.getProfileImageUrl()
                 ));
     }
+
     @Override
     @CacheEvict(value = "user:profile", key = "#command.userId")
     @Transactional
@@ -119,7 +118,6 @@ public class UserService implements UserUseCase {
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-
     void deleteImageAsync(String imageUrl) {
         Mono.fromRunnable(() ->
                         fileStoragePort.deleteFile(imageUrl)
