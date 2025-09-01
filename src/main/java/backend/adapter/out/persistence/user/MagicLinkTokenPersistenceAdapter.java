@@ -1,6 +1,6 @@
-package backend.adapter.out.persistence;
+package backend.adapter.out.persistence.user;
 
-import backend.application.port.out.MagicLinkTokenRepositoryPort;
+import backend.application.port.out.user.MagicLinkTokenRepositoryPort;
 import backend.domain.user.model.Email;
 import backend.domain.user.model.MagicLinkToken;
 import lombok.RequiredArgsConstructor;

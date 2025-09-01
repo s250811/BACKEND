@@ -1,4 +1,4 @@
-package backend.adapter.out.persistence;
+package backend.adapter.out.persistence.user;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

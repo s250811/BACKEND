@@ -1,4 +1,4 @@
-package backend.adapter.out.persistence;
+package backend.adapter.out.persistence.user;
 
 import org.springframework.data.r2dbc.repository.R2dbcRepository;
 import org.springframework.stereotype.Repository;

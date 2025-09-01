@@ -1,9 +1,10 @@
-package backend.adapter.out.persistence;
+package backend.adapter.out.persistence.user;
 
-import backend.application.port.out.UserRepositoryPort;
+import backend.application.port.out.user.UserRepositoryPort;
 import backend.domain.user.model.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Component
@@ -33,6 +34,12 @@ public class UserPersistenceAdapter implements UserRepositoryPort {
     @Override
     public Mono<Boolean> existsByEmail(Email email) {
         return repository.existsByEmail(email.getValue());
+    }
+
+    @Override
+    public Flux<User> findAllById(Iterable<Long> userIds) {
+        return repository.findAllById(userIds)
+                .map(this::toDomain);
     }
 
     private UserEntity toEntity(User user) {

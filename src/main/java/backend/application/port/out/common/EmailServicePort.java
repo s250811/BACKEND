@@ -1,4 +1,4 @@
-package backend.application.port.out;
+package backend.application.port.out.common;
 
 import reactor.core.publisher.Mono;
 

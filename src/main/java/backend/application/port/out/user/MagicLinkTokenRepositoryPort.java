@@ -1,4 +1,4 @@
-package backend.application.port.out;
+package backend.application.port.out.user;
 
 import backend.domain.user.model.Email;
 import backend.domain.user.model.MagicLinkToken;
