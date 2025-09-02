@@ -1,4 +1,4 @@
-package backend.adapter.out.token;
+package backend.infrastructure.adapter.out.auth;
 
 import backend.application.port.out.TokenServicePort;
 import io.jsonwebtoken.Claims;
@@ -28,9 +28,7 @@ public class JwtTokenAdapter implements TokenServicePort {
     private static final String REDIS_KEY_PREFIX = "refresh_token:";
     private static final String ACCESS_TOKEN_TYPE = "access";
     private static final String REFRESH_TOKEN_TYPE = "refresh";
-    private static final String EMAIL_CLAIM = "email";
     private static final String TYPE_CLAIM = "type";
-    private static final String VERIFICATION_CODE_PREFIX = "verification_code:";
 
     private final ReactiveRedisTemplate<String, String> reactiveRedisTemplate;
 
@@ -51,7 +49,7 @@ public class JwtTokenAdapter implements TokenServicePort {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
 
-    private String generateToken(String userId, String email, String type, long expiration) {
+    private String generateToken(String userId, String type, long expiration) {
         Date now = new Date();
         Date expirationDate = new Date(now.getTime() + expiration);
 
@@ -62,21 +60,17 @@ public class JwtTokenAdapter implements TokenServicePort {
                 .setExpiration(expirationDate)
                 .signWith(getSecretKey());
 
-        if (email != null) {
-            builder.claim(EMAIL_CLAIM, email);
-        }
-
         return builder.compact();
     }
 
     @Override
-    public String generateAccessToken(String userId, String email) {
-        return generateToken(userId, email, ACCESS_TOKEN_TYPE, accessTokenExpiration);
+    public String generateAccessToken(String userId) {
+        return generateToken(userId, ACCESS_TOKEN_TYPE, accessTokenExpiration);
     }
 
     @Override
     public String generateRefreshToken(String userId) {
-        return generateToken(userId, null, REFRESH_TOKEN_TYPE, refreshTokenExpiration);
+        return generateToken(userId, REFRESH_TOKEN_TYPE, refreshTokenExpiration);
     }
 
     @Override
@@ -107,11 +101,6 @@ public class JwtTokenAdapter implements TokenServicePort {
         return getClaimsFromToken(token).getSubject();
     }
 
-    @Override
-    public String getEmailFromToken(String token) {
-        return getClaimsFromToken(token).get(EMAIL_CLAIM, String.class);
-    }
-
     private String getRedisKey(String userId) {
         return REDIS_KEY_PREFIX + userId;
     }
@@ -134,28 +123,6 @@ public class JwtTokenAdapter implements TokenServicePort {
     @Override
     public Mono<Void> deleteRefreshToken(String userId) {
         String key = getRedisKey(userId);
-        return reactiveRedisTemplate.delete(key).then();
-    }
-
-    @Override
-    public String generateVerificationCode() {
-        return String.format("%06d", (int) (Math.random() * 1000000));
-    }
-    @Override
-    public Mono<Void> storeVerificationCode(String email, String code, long expirationMs) {
-        String key = VERIFICATION_CODE_PREFIX + email;
-        Duration ttl = Duration.ofMillis(expirationMs);
-        return reactiveRedisTemplate.opsForValue().set(key, code, ttl).then();
-    }
-
-    @Override
-    public Mono<String> getVerificationCode(String email) {
-        String key = VERIFICATION_CODE_PREFIX + email;
-        return reactiveRedisTemplate.opsForValue().get(key);
-    }
-    @Override
-    public Mono<Void> deleteVerificationCode(String email) {
-        String key = VERIFICATION_CODE_PREFIX + email;
         return reactiveRedisTemplate.delete(key).then();
     }
 }

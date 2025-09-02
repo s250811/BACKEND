@@ -1,4 +1,4 @@
-package backend.security;
+package backend.infrastructure.security;
 
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import reactor.core.publisher.Mono;

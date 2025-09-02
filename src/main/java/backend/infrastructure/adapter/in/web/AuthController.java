@@ -1,4 +1,4 @@
-package backend.adapter.in.web;
+package backend.infrastructure.adapter.in.web;
 
 import backend.application.port.in.AuthUseCase;
 import lombok.RequiredArgsConstructor;
@@ -82,27 +82,45 @@ public class AuthController {
         return Mono.just(ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, expiredCookie.toString()).build());
     }
 
-    @PostMapping("/magic-links")
-    @ManagedOperation(description = "실제 처리는 Spring Security OTT가 담당하며, 이 메서드는 문서화 목적입니다.")
+    @PostMapping("/verification-codes")
     @ResponseStatus(HttpStatus.OK)
-    public Mono<Void> sendMagicLink(@RequestParam String email) {
-        throw new UnsupportedOperationException("Spring Security OTT에 의해 처리됩니다.");
+    public Mono<Void> sendVerificationCode(@Valid @RequestBody VerificationCodeRequest request) {
+        return authUseCase.sendVerificationCode(new AuthUseCase.SendVerificationCodeCommand(request.email()))
+                .then();
+    }
+
+    @PostMapping("/magic-link")
+    @ResponseStatus(HttpStatus.OK)
+    public Mono<Void> sendMagicLink(@Valid @RequestBody MagicLinkRequest request) {
+        AuthUseCase.SendMagicLinkCommand command = new AuthUseCase.SendMagicLinkCommand(request.email());
+        return authUseCase.sendMagicLink(command)
+                .then();
     }
 
     @PostMapping("/magic-links/verification")
-    @ManagedOperation(description = "실제 처리는 Spring Security OTT가 담당하며, 이 메서드는 문서화 목적입니다.")
-    @ResponseStatus(HttpStatus.OK)
-    public Mono<ResponseEntity<LoginResponse>> validateMagicLink(@RequestParam String token) {
-        throw new UnsupportedOperationException("Spring Security OTT에 의해 처리됩니다.");
-    }
+    public Mono<ResponseEntity<LoginResponse>> verifyMagicLink(@RequestParam String token) {
+        AuthUseCase.VerifyMagicLinkCommand command = new AuthUseCase.VerifyMagicLinkCommand(token);
 
-    @PostMapping("/verification-codes")
-    @ResponseStatus(HttpStatus.OK)
-    public Mono<ResponseEntity<VerificationCodeResponse>> sendVerificationCode(@Valid @RequestBody VerificationCodeRequest request) {
-        return authUseCase.sendVerificationCode(new AuthUseCase.SendVerificationCodeCommand(request.email()))
+        return authUseCase.verifyMagicLink(command)
                 .map(result -> {
-                    VerificationCodeResponse response = new VerificationCodeResponse(request.email(), result.code());
-                    return ResponseEntity.ok(response);
+                    ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", result.refreshToken())
+                            .httpOnly(true)
+                            .secure(true)
+                            .sameSite("Strict")
+                            .maxAge(result.refreshTokenExpiration() / 1000)
+                            .path("/")
+                            .build();
+
+                    LoginResponse response = new LoginResponse(
+                            result.accessToken(),
+                            result.userId(),
+                            result.email(),
+                            result.nickname()
+                    );
+
+                    return ResponseEntity.ok()
+                            .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                            .body(response);
                 });
     }
 
@@ -124,6 +142,6 @@ public class AuthController {
     ) {}
 
     public record RefreshResponse(String accessToken) {}
+    public record MagicLinkRequest(@NotBlank @Email String email) {}
     public record VerificationCodeRequest(@NotBlank @Email String email) {}
-    public record VerificationCodeResponse(String email, String code) {}
 }

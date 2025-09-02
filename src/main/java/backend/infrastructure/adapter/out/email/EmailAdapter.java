@@ -1,4 +1,4 @@
-package backend.adapter.out.email;
+package backend.infrastructure.adapter.out.email;
 
 import backend.application.port.out.EmailServicePort;
 import lombok.RequiredArgsConstructor;

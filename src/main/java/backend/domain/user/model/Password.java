@@ -17,8 +17,8 @@ public class Password extends ValueObject {
         return encoder.encode(this.value);
     }
 
-    public boolean matches(String rawPassword, PasswordEncoder encoder) {
-        return encoder.matches(rawPassword, this.value);
+    public boolean matches(String encodedPassword) {
+        return this.value.equals(encodedPassword);
     }
 }
 

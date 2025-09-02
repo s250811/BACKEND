@@ -1,4 +1,4 @@
-package backend.adapter.out.persistence;
+package backend.infrastructure.adapter.out.persistence;
 
 import backend.application.port.out.UserRepositoryPort;
 import backend.domain.user.model.*;

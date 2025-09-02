@@ -1,4 +1,4 @@
-package backend.security;
+package backend.infrastructure.security;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

@@ -1,10 +1,7 @@
 package backend.application.service;
 
 import backend.application.port.in.UserUseCase;
-import backend.application.port.out.EmailServicePort;
-import backend.application.port.out.FileStoragePort;
-import backend.application.port.out.TokenServicePort;
-import backend.application.port.out.UserRepositoryPort;
+import backend.application.port.out.*;
 import backend.domain.user.model.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,11 +24,11 @@ public class UserService implements UserUseCase {
 
     private final FileStoragePort fileStoragePort;
     private final UserRepositoryPort userRepository;
-    private final TokenServicePort tokenService;
-    private final PasswordEncoder passwordEncoder;
+    private final VerificationCodePort verificationCodeService;
+    private final PasswordEncodingPort passwordEncoder;
 
     public Mono<RegisterUserResult> register(RegisterUserCommand command, String verificationCode) {
-        return tokenService.getVerificationCode(command.email())
+        return verificationCodeService.getVerificationCode(command.email())
                 .switchIfEmpty(Mono.error(new IllegalArgumentException("인증코드가 만료되었거나 존재하지 않습니다.")))
                 .flatMap(storedCode -> {
                     if (!storedCode.equals(verificationCode)) {
@@ -39,7 +36,7 @@ public class UserService implements UserUseCase {
                     }
                     return createUser(command)
                             .flatMap(this::saveUser)
-                            .flatMap(user -> tokenService.deleteVerificationCode(command.email())
+                            .flatMap(user -> verificationCodeService.deleteVerificationCode(command.email())
                                     .thenReturn(user))
                             .map(this::toRegisterResult);
                 });
@@ -49,7 +46,7 @@ public class UserService implements UserUseCase {
         return Mono.fromCallable(() -> {
             Email email = new Email(command.email());
             Password password = new Password(command.password());
-            String encodedPassword = password.encode(passwordEncoder);
+            String encodedPassword = passwordEncoder.encode(password.getValue());
             Password encodedPasswordVO = new Password(encodedPassword);
             String nicknameValue = (command.nickname() == null || command.nickname().trim().isEmpty())
                     ? Nickname.generateRandomNickname() : command.nickname();

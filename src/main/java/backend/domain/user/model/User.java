@@ -39,8 +39,8 @@ public class User extends AggregateRoot<UserId> {
         return this.id != null ? this.id.getValue() : null;
     }
 
-    public boolean isPasswordMatch(String rawPassword, PasswordEncoder encoder) {
-        return this.password.matches(rawPassword, encoder);
+    public boolean isPasswordMatch(String encodedPassword) {
+        return this.password.matches(encodedPassword);
     }
 
     public void updateProfile(Nickname nickname, String profileImageUrl) {

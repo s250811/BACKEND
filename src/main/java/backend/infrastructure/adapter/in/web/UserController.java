@@ -1,7 +1,7 @@
-package backend.adapter.in.web;
+package backend.infrastructure.adapter.in.web;
 
 import backend.application.port.in.UserUseCase;
-import backend.security.SecurityUtils;
+import backend.infrastructure.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +26,8 @@ public class UserController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<RegisterUserResponse> register(@Valid @RequestBody RegisterUserRequest request) {
+        System.out.println("Received registration request: " + request);
+
         UserUseCase.RegisterUserCommand command =
                 new UserUseCase.RegisterUserCommand(
                         request.email(),

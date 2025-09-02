@@ -1,4 +1,4 @@
-package backend.config;
+package backend.infrastructure.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.r2dbc.config.EnableR2dbcAuditing;

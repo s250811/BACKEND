@@ -1,4 +1,4 @@
-package backend.security;
+package backend.infrastructure.security;
 
 import backend.application.port.out.TokenServicePort;
 import backend.application.port.out.UserRepositoryPort;
@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 import java.util.Collections;
-import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -29,19 +28,14 @@ public class JwtAuthenticationManager implements ReactiveAuthenticationManager {
             return Mono.empty();
         }
 
-        try {
-            String userId = tokenService.getUserIdFromToken(token);
-            String email = tokenService.getEmailFromToken(token);
+        String userId = tokenService.getUserIdFromToken(token);
 
-            return userRepository.findById(UserId.of(Long.valueOf(userId)))
-                    .map(user -> new UsernamePasswordAuthenticationToken(
-                            new AuthenticatedUser(user.getId().getValue().toString(), email),
-                            token,
-                            Collections.singletonList(new SimpleGrantedAuthority("MEMBER"))
-                    ));
-        } catch (Exception e) {
-            return Mono.empty();
-        }
+        return userRepository.findById(UserId.of(Long.valueOf(userId)))
+                .map(user -> new UsernamePasswordAuthenticationToken(
+                        new AuthenticatedUser(user.getId().getValue().toString(), user.getEmail().getValue()),
+                        token,
+                        Collections.singletonList(new SimpleGrantedAuthority("MEMBER"))
+                ));
     }
 
     public record AuthenticatedUser(String userId, String email) {}

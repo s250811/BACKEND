@@ -1,4 +1,4 @@
-package backend.adapter.out.file;
+package backend.infrastructure.adapter.out.file;
 
 import backend.application.port.out.FileStoragePort;
 import lombok.RequiredArgsConstructor;
