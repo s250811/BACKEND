@@ -1,12 +1,12 @@
 package backend.infrastructure.adapter.in.web;
 
 import backend.application.port.in.AuthUseCase;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jmx.export.annotation.ManagedOperation;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
@@ -18,12 +18,13 @@ import jakarta.validation.constraints.NotBlank;
  * Auth 외부 요청을 받는 진입 지점
  */
 @RestController
-@RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
+@RequestMapping("/api/v1/auth")
 public class AuthController {
 
     private final AuthUseCase authUseCase;
 
+    @Operation(summary = "로그인")
     @PostMapping("/login")
     public Mono<ResponseEntity<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
         var command = new AuthUseCase.LoginCommand(
@@ -44,6 +45,7 @@ public class AuthController {
                 });
     }
 
+    @Operation(summary = "Token 재발급")
     @PostMapping("/refresh")
     public Mono<ResponseEntity<RefreshResponse>> refresh(ServerWebExchange exchange) {
         String refreshToken = extractRefreshTokenFromCookie(exchange);
@@ -63,6 +65,7 @@ public class AuthController {
                 .onErrorReturn(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     }
 
+    @Operation(summary = "로그아웃")
     @PostMapping("/logout")
     public Mono<ResponseEntity<Void>> logout(ServerWebExchange exchange) {
         String refreshToken = extractRefreshTokenFromCookie(exchange);
@@ -84,12 +87,14 @@ public class AuthController {
 
     @PostMapping("/verification-codes")
     @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "이메일 인증 코드 전송")
     public Mono<Void> sendVerificationCode(@Valid @RequestBody VerificationCodeRequest request) {
         return authUseCase.sendVerificationCode(new AuthUseCase.SendVerificationCodeCommand(request.email()))
                 .then();
     }
 
     @PostMapping("/magic-link")
+    @Operation(summary = "매직 링크 전송")
     @ResponseStatus(HttpStatus.OK)
     public Mono<Void> sendMagicLink(@Valid @RequestBody MagicLinkRequest request) {
         AuthUseCase.SendMagicLinkCommand command = new AuthUseCase.SendMagicLinkCommand(request.email());
@@ -97,6 +102,7 @@ public class AuthController {
                 .then();
     }
 
+    @Operation(summary = "매직 링크 검증 및 로그인")
     @PostMapping("/magic-links/verification")
     public Mono<ResponseEntity<LoginResponse>> verifyMagicLink(@RequestParam String token) {
         AuthUseCase.VerifyMagicLinkCommand command = new AuthUseCase.VerifyMagicLinkCommand(token);

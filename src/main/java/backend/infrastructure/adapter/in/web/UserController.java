@@ -2,6 +2,7 @@ package backend.infrastructure.adapter.in.web;
 
 import backend.application.port.in.UserUseCase;
 import backend.infrastructure.security.SecurityUtils;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,7 @@ public class UserController {
 
     private final UserUseCase userUseCase;
 
+    @Operation(summary = "회원가입")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<RegisterUserResponse> register(@Valid @RequestBody RegisterUserRequest request) {
@@ -43,6 +45,7 @@ public class UserController {
                 ));
     }
 
+    @Operation(summary = "프로필 조회")
     @GetMapping("/me")
     public Mono<ResponseEntity<UserProfileResponse>> getProfile() {
         return SecurityUtils.getCurrentUserId()
@@ -56,6 +59,7 @@ public class UserController {
                 .onErrorReturn(ResponseEntity.badRequest().build());
     }
 
+    @Operation(summary = "프로필 수정")
     @PatchMapping("/me")
     public Mono<ResponseEntity<UpdateProfileResponse>> updateProfile(
             @Pattern(regexp = "^[가-힣a-zA-Z0-9]{1,10}$",
