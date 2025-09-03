@@ -107,7 +107,7 @@ public class AuthService implements AuthUseCase {
         return userRepository.existsByEmail(email)
                 .filter(exists -> exists)
                 .switchIfEmpty(Mono.error(new UserException(UserErrorCode.USER_NOT_FOUND)))
-                .then(Mono.defer(() -> {
+                .then(Mono.defer(() -> { // 구독 시점에 실행 (지연 계산)
                     String token = magicLinkPort.generateMagicLinkToken();
                     String magicLink = magicLinkBaseUrl + "/auth/magic-login?token=" + token;
                     return magicLinkPort.storeMagicLinkToken(email, token, magicLinkExpirationMs)
@@ -136,19 +136,10 @@ public class AuthService implements AuthUseCase {
     @Override
     public Mono<Void> sendVerificationCode(SendVerificationCodeCommand command) {
         String email = command.email();
-        return checkEmailNotExists(email)
-                .then(Mono.defer(() -> {
+        return Mono.defer(() -> { // 구독 시점에 실행 (지연 계산)
                     String code = verificationCodePort.generateVerificationCode();
                     return verificationCodePort.storeVerificationCode(email, code, codeExpirationMs)
                             .then(emailService.sendVerificationEmail(email, code));
-                }));
+                });
     }
-
-    private Mono<Void> checkEmailNotExists(String email) {
-        return userRepository.existsByEmail(email)
-                .flatMap(exists -> exists
-                        ? Mono.error(new UserException(UserErrorCode.EMAIL_ALREADY_EXISTS))
-                        : Mono.empty());
-    }
-
 }

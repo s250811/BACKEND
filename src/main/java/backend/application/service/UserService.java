@@ -30,6 +30,15 @@ public class UserService implements UserUseCase {
     private final VerificationCodePort verificationCodeService;
     private final PasswordEncodingPort passwordEncoder;
 
+    @Override
+    public Mono<Void> checkEmailDuplicate(CheckEmailDuplicateCommand command) {
+        return userRepository.existsByEmail(command.email())
+                .flatMap(exists -> exists
+                        ? Mono.error(new UserException(UserErrorCode.EMAIL_ALREADY_EXISTS))
+                        : Mono.empty());
+    }
+
+    @Override
     public Mono<RegisterUserResult> register(RegisterUserCommand command, String verificationCode) {
         return verificationCodeService.getVerificationCode(command.email())
                 .switchIfEmpty(Mono.error(new UserException(UserErrorCode.INVALID_VERIFICATION_CODE)))
@@ -67,7 +76,7 @@ public class UserService implements UserUseCase {
                 user.getNickname()
         );
     }
-
+    @Override
     @Cacheable(value = "user:profile", key = "#userId")
     @Transactional(readOnly = true)
     public Mono<UserProfileResult> getUserProfile(String userId) {
@@ -117,7 +126,6 @@ public class UserService implements UserUseCase {
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-
     void deleteImageAsync(String imageUrl) {
         Mono.fromRunnable(() ->
                         fileStoragePort.deleteFile(imageUrl)
