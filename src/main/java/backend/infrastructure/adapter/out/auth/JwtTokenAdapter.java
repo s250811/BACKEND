@@ -1,6 +1,6 @@
 package backend.infrastructure.adapter.out.auth;
 
-import backend.application.port.out.TokenServicePort;
+import backend.application.port.out.auth.TokenServicePort;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.JwtParser;

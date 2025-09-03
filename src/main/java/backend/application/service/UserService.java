@@ -1,14 +1,15 @@
 package backend.application.service;
 
 import backend.application.port.in.UserUseCase;
-import backend.application.port.out.*;
+import backend.application.port.out.common.FileStoragePort;
+import backend.application.port.out.auth.PasswordEncodingPort;
+import backend.application.port.out.user.UserRepositoryPort;
+import backend.application.port.out.auth.VerificationCodePort;
 import backend.domain.user.model.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;

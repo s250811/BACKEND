@@ -1,7 +1,7 @@
 package backend.infrastructure.security;
 
-import backend.application.port.out.TokenServicePort;
-import backend.application.port.out.UserRepositoryPort;
+import backend.application.port.out.auth.TokenServicePort;
+import backend.application.port.out.user.UserRepositoryPort;
 import backend.domain.user.model.UserId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;

@@ -1,6 +1,6 @@
 package backend.infrastructure.adapter.out.verification;
 
-import backend.application.port.out.VerificationCodePort;
+import backend.application.port.out.auth.VerificationCodePort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Component;

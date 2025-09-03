@@ -1,6 +1,6 @@
 package backend.infrastructure.adapter.out.file;
 
-import backend.application.port.out.FileStoragePort;
+import backend.application.port.out.common.FileStoragePort;
 import backend.infrastructure.config.S3Config;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -1,6 +1,6 @@
 package backend.infrastructure.adapter.out.auth;
 
-import backend.application.port.out.PasswordEncodingPort;
+import backend.application.port.out.auth.PasswordEncodingPort;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
