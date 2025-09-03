@@ -21,7 +21,9 @@ public class SwaggerConfig {
                         .title("Backend API")
                         .version("1.0.0")
                         .description("누구나 PM이 될 수 있다 API 명세서"))
-                .servers(List.of(new Server().url("http://43.201.194.237:8080")))
+                .servers(List.of(
+                        new Server().url("http://43.201.194.237:8080"),
+                        new Server().url("http://localhost:8080")))
                 .addSecurityItem(new SecurityRequirement().addList("Authorization"))
                 .components(new Components()
                         .addSecuritySchemes("Authorization",
