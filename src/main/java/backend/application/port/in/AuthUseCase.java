@@ -3,6 +3,7 @@ package backend.application.port.in;
 import reactor.core.publisher.Mono;
 
 public interface AuthUseCase {
+
     record LoginCommand(String email, String password, boolean rememberMe) {}
     record LoginResult(
             String accessToken,

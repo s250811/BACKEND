@@ -1,5 +1,6 @@
 package backend.infrastructure.adapter.in.web;
 
+import backend.application.port.in.AuthUseCase;
 import backend.application.port.in.UserUseCase;
 import backend.infrastructure.security.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,6 +24,13 @@ import jakarta.validation.constraints.Pattern;
 public class UserController {
 
     private final UserUseCase userUseCase;
+
+    @GetMapping("/emails/availability")
+    @Operation(summary = "이메일 중복 검사")
+    public Mono<Void> checkEmailDuplicate(@RequestParam @Email @NotBlank String email) {
+        return userUseCase.checkEmailDuplicate(new UserUseCase.CheckEmailDuplicateCommand(email))
+                .then();
+    }
 
     @Operation(summary = "회원가입")
     @PostMapping
