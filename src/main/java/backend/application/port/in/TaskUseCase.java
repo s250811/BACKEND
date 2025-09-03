@@ -1,7 +1,6 @@
 package backend.application.port.in;
 
-import backend.adapter.in.web.TaskController;
-import backend.domain.task.model.Task;
+import backend.infrastructure.adapter.in.web.TaskController;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;

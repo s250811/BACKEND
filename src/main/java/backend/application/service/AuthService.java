@@ -1,14 +1,17 @@
 package backend.application.service;
 
 import backend.application.port.in.AuthUseCase;
+import backend.application.port.out.auth.MagicLinkPort;
+import backend.application.port.out.auth.PasswordEncodingPort;
+import backend.application.port.out.auth.TokenServicePort;
+import backend.application.port.out.auth.VerificationCodePort;
 import backend.application.port.out.common.EmailServicePort;
-import backend.application.port.out.user.MagicLinkTokenRepositoryPort;
-import backend.application.port.out.user.TokenServicePort;
-import backend.application.port.out.user.UserRepositoryPort;
+import backend.application.port.out.user.*;
 import backend.domain.user.model.*;
+import backend.exception.user.UserErrorCode;
+import backend.exception.user.UserException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -17,26 +20,28 @@ import reactor.core.publisher.Mono;
 public class AuthService implements AuthUseCase {
 
     private final UserRepositoryPort userRepository;
-    private final MagicLinkTokenRepositoryPort magicLinkTokenRepository;
     private final EmailServicePort emailService;
     private final TokenServicePort tokenService;
-    private final PasswordEncoder passwordEncoder;
+    private final PasswordEncodingPort passwordEncoder;
+    private final VerificationCodePort verificationCodePort;
+    private final MagicLinkPort magicLinkPort;
 
     @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpiration;
 
-    @Value("${jwt.magic-link-expiration:600000}")
+    @Value("${magic-link.expiration:600000}")
     private long magicLinkExpirationMs;
 
     @Value("${verification.code-expiration:60000}")
     private long codeExpirationMs;
 
+    @Value("${magic-link.base-url:http://localhost:3000}")
+    private String magicLinkBaseUrl;
+
     @Override
     public Mono<LoginResult> login(LoginCommand command) {
-        Email email = new Email(command.email());
-
-        return userRepository.findByEmail(email)
-                .switchIfEmpty(Mono.error(new IllegalArgumentException("존재하지 않는 이메일 주소입니다.")))
+        return userRepository.findByEmail(command.email())
+                .switchIfEmpty(Mono.error(new UserException(UserErrorCode.USER_NOT_FOUND)))
                 .flatMap(user -> validatePassword(user, command.password()))
                 .flatMap(this::generateTokens);
     }
@@ -45,24 +50,18 @@ public class AuthService implements AuthUseCase {
     public Mono<RefreshResult> refresh(RefreshCommand command) {
         String refreshToken = command.refreshToken();
 
-        if (!tokenService.validateToken(refreshToken)) {
-            return Mono.error(new IllegalArgumentException("Invalid refresh token"));
-        }
-
         String userId = tokenService.getUserIdFromToken(refreshToken);
 
         return tokenService.validateRefreshToken(userId, refreshToken)
                 .flatMap(isValid -> {
                     if (!isValid) {
-                        return Mono.error(new IllegalArgumentException("Invalid refresh token"));
+                        return Mono.error(new UserException(UserErrorCode.INVALID_REFRESH_TOKEN));
                     }
-                    return userRepository.findById(UserId.of(Long.valueOf(userId)));
+                    return userRepository.findById(UserId.of(Long.valueOf(userId)))
+                            .switchIfEmpty(Mono.error(new UserException(UserErrorCode.USER_NOT_FOUND)));
                 })
                 .flatMap(user -> {
-                    String newAccessToken = tokenService.generateAccessToken(
-                            user.getId().getValue().toString(),
-                            user.getEmail().getValue()
-                    );
+                    String newAccessToken = tokenService.generateAccessToken(user.getId().getValue().toString());
                     String newRefreshToken = tokenService.generateRefreshToken(user.getId().getValue().toString());
 
                     return tokenService.storeRefreshToken(user.getId().getValue().toString(), newRefreshToken)
@@ -74,62 +73,21 @@ public class AuthService implements AuthUseCase {
     public Mono<Void> logout(LogoutCommand command) {
         String refreshToken = command.refreshToken();
 
-        if (!tokenService.validateToken(refreshToken)) {
-            return Mono.empty();
-        }
-
         String userId = tokenService.getUserIdFromToken(refreshToken);
         return tokenService.deleteRefreshToken(userId);
     }
 
-    @Override
-    public Mono<Void> sendMagicLink(SendMagicLinkCommand command) {
-        Email email = new Email(command.email());
-
-        return userRepository.existsByEmail(email)
-                .filter(exists -> exists)
-                .switchIfEmpty(Mono.error(new IllegalArgumentException("존재하지 않는 이메일 주소입니다.")))
-                .then(createAndSendMagicLink(email));
-    }
-
-    @Override
-    public Mono<VerifyMagicLinkResult> verifyMagicLink(VerifyMagicLinkCommand command) {
-        return magicLinkTokenRepository.findByToken(command.token())
-                .switchIfEmpty(Mono.error(new IllegalArgumentException("유효하지 않은 링크입니다.")))
-                .flatMap(this::validateMagicLinkToken)
-                .flatMap(token -> userRepository.findByEmail(token.getEmail()))
-                .flatMap(user -> {
-                    String accessToken = tokenService.generateAccessToken(
-                            user.getId().getValue().toString(),
-                            user.getEmail().getValue()
-                    );
-                    String refreshToken = tokenService.generateRefreshToken(user.getId().getValue().toString());
-
-                    return tokenService.storeRefreshToken(user.getId().getValue().toString(), refreshToken)
-                            .thenReturn(new VerifyMagicLinkResult(
-                                    accessToken,
-                                    refreshToken,
-                                    refreshTokenExpiration,
-                                    user.getId().getValue().toString(),
-                                    user.getEmail().getValue(),
-                                    user.getNickname().getValue()
-                            ));
-                });
-    }
-
     private Mono<User> validatePassword(User user, String rawPassword) {
-        if (!user.isPasswordMatch(rawPassword, passwordEncoder)) {
-//            return Mono.error(new IllegalArgumentException("비밀번호가 올바르지 않습니다."));
-            return Mono.just(user);
+        String encodedPassword = user.getPassword();
+
+        if (!passwordEncoder.matches(rawPassword, encodedPassword)) {
+            return Mono.error(new UserException(UserErrorCode.INVALID_PASSWORD));
         }
         return Mono.just(user);
     }
 
     private Mono<LoginResult> generateTokens(User user) {
-        String accessToken = tokenService.generateAccessToken(
-                user.getId().getValue().toString(),
-                user.getEmail().getValue()
-        );
+        String accessToken = tokenService.generateAccessToken(user.getId().getValue().toString());
         String refreshToken = tokenService.generateRefreshToken(user.getId().getValue().toString());
 
         return tokenService.storeRefreshToken(user.getId().getValue().toString(), refreshToken)
@@ -138,50 +96,58 @@ public class AuthService implements AuthUseCase {
                         refreshToken,
                         refreshTokenExpiration,
                         user.getId().getValue().toString(),
-                        user.getEmail().getValue(),
-                        user.getNickname().getValue()
+                        user.getEmail(),
+                        user.getNickname()
                 ));
     }
 
-    private Mono<Void> createAndSendMagicLink(Email email) {
-        return magicLinkTokenRepository.deleteByEmail(email)
-                .then(Mono.fromCallable(() -> {
-                    String token = tokenService.generateMagicLinkToken();
-                    return MagicLinkToken.create(email, token,magicLinkExpirationMs / 60000L);
-                }))
-                .flatMap(magicLinkTokenRepository::save)
-                .flatMap(token -> {
-                    // TODO: 도메인 확정 시 하드코딩된 localhost URL 변경 필요
-                    String magicLink = "http://localhost:3000/auth/magic-login?token=" + token.getToken();
-                    return emailService.sendMagicLinkEmail(email.getValue(), magicLink);
-                });
-    }
-
-    private Mono<MagicLinkToken> validateMagicLinkToken(MagicLinkToken token) {
-        if (!token.isValid()) {
-            return Mono.error(new IllegalArgumentException("만료되거나 이미 사용된 링크입니다."));
-        }
-        token.markAsUsed();
-        return magicLinkTokenRepository.save(token);
-    }
-
     @Override
-    public Mono<SendVerificationCodeResult> sendVerificationCode(SendVerificationCodeCommand command) {
-        Email email = new Email(command.email());
-
-        return checkEmailNotExists(email)
+    public Mono<Void> sendMagicLink(SendMagicLinkCommand command) {
+        String email = command.email();
+        return userRepository.existsByEmail(email)
+                .filter(exists -> exists)
+                .switchIfEmpty(Mono.error(new UserException(UserErrorCode.USER_NOT_FOUND)))
                 .then(Mono.defer(() -> {
-                    String code = tokenService.generateVerificationCode();
-                    return tokenService.storeVerificationCode(email.getValue(), code, codeExpirationMs)
-                            .then(emailService.sendVerificationEmail(email.getValue(), code))
-                            .thenReturn(new SendVerificationCodeResult(code));
+                    String token = magicLinkPort.generateMagicLinkToken();
+                    String magicLink = magicLinkBaseUrl + "/auth/magic-login?token=" + token;
+                    return magicLinkPort.storeMagicLinkToken(email, token, magicLinkExpirationMs)
+                            .then(emailService.sendMagicLinkEmail(email, magicLink));
                 }));
     }
 
-    private Mono<Void> checkEmailNotExists(Email email) {
+    @Override
+    public Mono<LoginResult> verifyMagicLink(VerifyMagicLinkCommand command) {
+        String token = command.token();
+
+        return findEmailByMagicLinkToken(token)
+                .switchIfEmpty(Mono.error(new UserException(UserErrorCode.INVALID_MAGIC_LINK)))
+                .flatMap(email -> {
+                    return userRepository.findByEmail(email)
+                            .switchIfEmpty(Mono.error(new UserException(UserErrorCode.USER_NOT_FOUND)))
+                            .flatMap(user -> magicLinkPort.deleteMagicLinkToken(email)
+                                    .then(generateTokens(user)));
+                });
+    }
+
+    private Mono<String> findEmailByMagicLinkToken(String token) {
+        return magicLinkPort.findEmailByToken(token);
+    }
+
+    @Override
+    public Mono<Void> sendVerificationCode(SendVerificationCodeCommand command) {
+        String email = command.email();
+        return checkEmailNotExists(email)
+                .then(Mono.defer(() -> {
+                    String code = verificationCodePort.generateVerificationCode();
+                    return verificationCodePort.storeVerificationCode(email, code, codeExpirationMs)
+                            .then(emailService.sendVerificationEmail(email, code));
+                }));
+    }
+
+    private Mono<Void> checkEmailNotExists(String email) {
         return userRepository.existsByEmail(email)
                 .flatMap(exists -> exists
-                        ? Mono.error(new IllegalArgumentException("이미 가입된 이메일입니다."))
+                        ? Mono.error(new UserException(UserErrorCode.EMAIL_ALREADY_EXISTS))
                         : Mono.empty());
     }
 

@@ -13,7 +13,7 @@ import backend.exception.user.UserErrorCode;
 import backend.exception.user.UserException;
 import backend.exception.workspace.WorkspaceErrorCode;
 import backend.exception.workspace.WorkspaceException;
-import backend.security.SecurityUtils;
+import backend.infrastructure.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

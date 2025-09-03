@@ -22,7 +22,7 @@ import backend.exception.user.UserErrorCode;
 import backend.exception.user.UserException;
 import backend.exception.workspace.WorkspaceErrorCode;
 import backend.exception.workspace.WorkspaceException;
-import backend.security.SecurityUtils;
+import backend.infrastructure.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,7 +69,7 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                                             WorkspaceMember ownerMember = WorkspaceMember.builder()
                                                     .workspaceId(savedWorkspace.getId())
                                                     .userId(user.getId())
-                                                    .nickname(user.getNickname().getValue())
+                                                    .nickname(user.getNickname())
                                                     .role(WorkspaceMemberRole.OWNER)
                                                     .isDeleted(false)
                                                     .build();
@@ -149,7 +149,7 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
 
                                                                     return new MemberInfo(
                                                                             user.getId().getValue(),
-                                                                            user.getNickname().getValue(),
+                                                                            user.getNickname(),
                                                                             user.getProfileImageUrl(),
                                                                             member.getRole().name()
                                                                     );

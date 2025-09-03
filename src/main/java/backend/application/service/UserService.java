@@ -2,14 +2,16 @@ package backend.application.service;
 
 import backend.application.port.in.UserUseCase;
 import backend.application.port.out.common.FileStoragePort;
-import backend.application.port.out.user.TokenServicePort;
+import backend.application.port.out.auth.PasswordEncodingPort;
 import backend.application.port.out.user.UserRepositoryPort;
+import backend.application.port.out.auth.VerificationCodePort;
 import backend.domain.user.model.*;
+import backend.exception.user.UserErrorCode;
+import backend.exception.user.UserException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,19 +27,19 @@ public class UserService implements UserUseCase {
 
     private final FileStoragePort fileStoragePort;
     private final UserRepositoryPort userRepository;
-    private final TokenServicePort tokenService;
-    private final PasswordEncoder passwordEncoder;
+    private final VerificationCodePort verificationCodeService;
+    private final PasswordEncodingPort passwordEncoder;
 
     public Mono<RegisterUserResult> register(RegisterUserCommand command, String verificationCode) {
-        return tokenService.getVerificationCode(command.email())
-                .switchIfEmpty(Mono.error(new IllegalArgumentException("인증코드가 만료되었거나 존재하지 않습니다.")))
+        return verificationCodeService.getVerificationCode(command.email())
+                .switchIfEmpty(Mono.error(new UserException(UserErrorCode.INVALID_VERIFICATION_CODE)))
                 .flatMap(storedCode -> {
                     if (!storedCode.equals(verificationCode)) {
-                        return Mono.error(new IllegalArgumentException("잘못된 인증코드입니다."));
+                        return Mono.error(new UserException(UserErrorCode.INVALID_VERIFICATION_CODE));
                     }
                     return createUser(command)
                             .flatMap(this::saveUser)
-                            .flatMap(user -> tokenService.deleteVerificationCode(command.email())
+                            .flatMap(user -> verificationCodeService.deleteVerificationCode(command.email())
                                     .thenReturn(user))
                             .map(this::toRegisterResult);
                 });
@@ -45,14 +47,12 @@ public class UserService implements UserUseCase {
 
     private Mono<User> createUser(RegisterUserCommand command) {
         return Mono.fromCallable(() -> {
-            Email email = new Email(command.email());
-            Password password = new Password(command.password());
-            String encodedPassword = password.encode(passwordEncoder);
-            Password encodedPasswordVO = new Password(encodedPassword);
-            String nicknameValue = (command.nickname() == null || command.nickname().trim().isEmpty())
-                    ? Nickname.generateRandomNickname() : command.nickname();
-            Nickname nickname = new Nickname(nicknameValue);
-            return User.create(email, encodedPasswordVO, nickname);
+            String email = command.email();
+            String password = command.password();
+            String encodedPassword = passwordEncoder.encode(password);
+            String nickname = (command.nickname() == null || command.nickname().trim().isEmpty())
+                    ? User.generateRandomNickname() : command.nickname();
+            return User.create(email, encodedPassword, nickname);
         });
     }
 
@@ -63,8 +63,8 @@ public class UserService implements UserUseCase {
     private RegisterUserResult toRegisterResult(User user) {
         return new UserUseCase.RegisterUserResult(
                 user.getId().getValue().toString(),
-                user.getEmail().getValue(),
-                user.getNickname().getValue()
+                user.getEmail(),
+                user.getNickname()
         );
     }
 
@@ -72,20 +72,20 @@ public class UserService implements UserUseCase {
     @Transactional(readOnly = true)
     public Mono<UserProfileResult> getUserProfile(String userId) {
         return userRepository.findById(UserId.of(Long.valueOf(userId)))
+                .switchIfEmpty(Mono.error(new UserException(UserErrorCode.USER_NOT_FOUND)))
                 .map(user -> new UserProfileResult(
                         user.getId().getValue().toString(),
-                        user.getEmail().getValue(),
-                        user.getNickname().getValue(),
+                        user.getEmail(),
+                        user.getNickname(),
                         user.getProfileImageUrl()
                 ));
     }
-
     @Override
     @CacheEvict(value = "user:profile", key = "#command.userId")
     @Transactional
     public Mono<UpdateProfileResult> updateProfile(UpdateProfileCommand command) {
         return userRepository.findById(UserId.of(Long.valueOf(command.userId())))
-                .switchIfEmpty(Mono.error(new IllegalArgumentException("사용자를 찾을 수 없습니다.")))
+                .switchIfEmpty(Mono.error(new UserException(UserErrorCode.USER_NOT_FOUND)))
                 .flatMap(user -> {
                     String oldImageUrl = user.getProfileImageUrl();
 
@@ -94,12 +94,11 @@ public class UserService implements UserUseCase {
                             : Mono.just(user.getProfileImageUrl());
 
                     return imageUrlMono.flatMap(imageUrl -> {
-                        String nicknameValue = command.nickname() != null
+                        String nickname = command.nickname() != null
                                 ? command.nickname()
-                                : user.getNickname().getValue();
+                                : user.getNickname();
 
-                        Nickname newNickname = new Nickname(nicknameValue);
-                        user.updateProfile(newNickname, imageUrl);
+                        user.updateProfile(nickname, imageUrl);
                         return userRepository.save(user)
                                 .doOnSuccess(savedUser -> {
                                     // 트랜잭션 커밋 후 기존 이미지는 비동기로 별도 스레드에서 삭제 (실패해도 메인 플로우에 영향 X)
@@ -111,13 +110,14 @@ public class UserService implements UserUseCase {
                 })
                 .map(user -> new UpdateProfileResult(
                         user.getId().getValue().toString(),
-                        user.getEmail().getValue(),
-                        user.getNickname().getValue(),
+                        user.getEmail(),
+                        user.getNickname(),
                         user.getProfileImageUrl()
                 ));
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
+
     void deleteImageAsync(String imageUrl) {
         Mono.fromRunnable(() ->
                         fileStoragePort.deleteFile(imageUrl)

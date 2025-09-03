@@ -1,21 +1,13 @@
 spring:
   r2dbc:
-    url: r2dbc:postgresql://localhost:5432/pmDatabase?sslMode=disable
-    username: root
-    password: password
+    url: ${DATABASE_URL:r2dbc:postgresql://database-1.c5e2usce6r1z.ap-northeast-2.rds.amazonaws.com:5432/pmDatabase?sslMode=require}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
   data:
     redis:
       host: localhost
       port: 6379
       password:
-
-aws:
-  s3:
-    bucket: ${AWS_S3_BUCKET:pickles3bucket}
-    region: ${AWS_REGION:ap-northeast-2}
-    access-key: AKIA2HW3ZTMW7JJ4ARPY
-    secret-key: 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
-    base-url: https://${aws.s3.bucket}.s3.${aws.s3.region}.amazonaws.com/
 
 logging:
   level:
