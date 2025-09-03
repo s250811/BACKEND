@@ -3,6 +3,8 @@ package backend.infrastructure.security;
 import backend.application.port.out.auth.TokenServicePort;
 import backend.application.port.out.user.UserRepositoryPort;
 import backend.domain.user.model.UserId;
+import backend.exception.user.UserErrorCode;
+import backend.exception.user.UserException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -25,14 +27,14 @@ public class JwtAuthenticationManager implements ReactiveAuthenticationManager {
         String token = authentication.getCredentials().toString();
 
         if (!tokenService.validateToken(token)) {
-            return Mono.empty();
+            throw new UserException(UserErrorCode.INVALID_TOKEN);
         }
 
         String userId = tokenService.getUserIdFromToken(token);
 
         return userRepository.findById(UserId.of(Long.valueOf(userId)))
                 .map(user -> new UsernamePasswordAuthenticationToken(
-                        new AuthenticatedUser(user.getId().getValue().toString(), user.getEmail().getValue()),
+                        new AuthenticatedUser(user.getId().getValue().toString(), user.getEmail()),
                         token,
                         Collections.singletonList(new SimpleGrantedAuthority("MEMBER"))
                 ));

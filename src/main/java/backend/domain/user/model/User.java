@@ -3,20 +3,22 @@ package backend.domain.user.model;
 import backend.domain.common.AggregateRoot;
 import lombok.Builder;
 import lombok.Getter;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import software.amazon.awssdk.services.s3.endpoints.internal.Value;
+
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Getter
 public class User extends AggregateRoot<UserId> {
-    private Email email;
-    private Password password;
-    private Nickname nickname;
+    private String email;
+    private String password;
+    private String nickname;
     private String profileImageUrl;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     @Builder
-    public User(UserId id, Email email, Password password, Nickname nickname,
+    public User(UserId id, String email, String password, String nickname,
                 String profileImageUrl, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.email = email;
@@ -27,7 +29,7 @@ public class User extends AggregateRoot<UserId> {
         this.updatedAt = updatedAt;
     }
 
-    public static User create(Email email, Password password, Nickname nickname) {
+    public static User create(String email, String password, String nickname) {
         return User.builder()
                 .email(email)
                 .password(password)
@@ -39,11 +41,7 @@ public class User extends AggregateRoot<UserId> {
         return this.id != null ? this.id.getValue() : null;
     }
 
-    public boolean isPasswordMatch(String encodedPassword) {
-        return this.password.matches(encodedPassword);
-    }
-
-    public void updateProfile(Nickname nickname, String profileImageUrl) {
+    public void updateProfile(String nickname, String profileImageUrl) {
         if (nickname != null) {
             this.nickname = nickname;
         }
@@ -53,9 +51,8 @@ public class User extends AggregateRoot<UserId> {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public void changePassword(Password newPassword) {
-        this.password = newPassword;
-        this.updatedAt = LocalDateTime.now();
+    public static String generateRandomNickname() {
+        return UUID.randomUUID().toString().replace("-", "").substring(0, 10);
     }
 }
 

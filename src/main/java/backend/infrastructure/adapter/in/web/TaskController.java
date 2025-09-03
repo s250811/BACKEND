@@ -2,6 +2,7 @@ package backend.infrastructure.adapter.in.web;
 
 import backend.infrastructure.adapter.in.common.ApiResponseDto;
 import backend.application.port.in.TaskUseCase;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
@@ -16,7 +17,7 @@ public class TaskController {
 
     private final TaskUseCase taskUseCase;
 
-    // 태스크 생성
+    @Operation(summary = "태스크 생성")
     @PostMapping("/tasks")
     public Mono<ApiResponseDto<Void>> createTask(@RequestBody CreatRequest request) {
 
@@ -24,7 +25,7 @@ public class TaskController {
                 .then(Mono.just(ApiResponseDto.createSuccessNoContent(null)));
     }
 
-    // 태스크 상세 조회
+    @Operation(summary = "태스크 상세 조회")
     @GetMapping("/tasks/{taskId}")
     public Mono<ApiResponseDto<TaskDetailResponse>> getTaskDetail(@PathVariable Long taskId) {
         return taskUseCase.getTaskDetail(taskId)

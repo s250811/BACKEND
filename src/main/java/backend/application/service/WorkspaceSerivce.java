@@ -69,7 +69,7 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                                             WorkspaceMember ownerMember = WorkspaceMember.builder()
                                                     .workspaceId(savedWorkspace.getId())
                                                     .userId(user.getId())
-                                                    .nickname(user.getNickname().getValue())
+                                                    .nickname(user.getNickname())
                                                     .role(WorkspaceMemberRole.OWNER)
                                                     .isDeleted(false)
                                                     .build();
@@ -149,7 +149,7 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
 
                                                                     return new MemberInfo(
                                                                             user.getId().getValue(),
-                                                                            user.getNickname().getValue(),
+                                                                            user.getNickname(),
                                                                             user.getProfileImageUrl(),
                                                                             member.getRole().name()
                                                                     );

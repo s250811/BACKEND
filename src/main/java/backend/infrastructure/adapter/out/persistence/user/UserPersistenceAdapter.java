@@ -26,14 +26,13 @@ public class UserPersistenceAdapter implements UserRepositoryPort {
     }
 
     @Override
-    public Mono<User> findByEmail(Email email) {
-        return repository.findByEmail(email.getValue())
-                .map(this::toDomain);
+    public Mono<User> findByEmail(String email) {
+        return repository.findByEmail(email).map(this::toDomain);
     }
 
     @Override
-    public Mono<Boolean> existsByEmail(Email email) {
-        return repository.existsByEmail(email.getValue());
+    public Mono<Boolean> existsByEmail(String email) {
+        return repository.existsByEmail(email);
     }
 
     @Override
@@ -45,9 +44,9 @@ public class UserPersistenceAdapter implements UserRepositoryPort {
     private UserEntity toEntity(User user) {
         return UserEntity.builder()
                 .id(user.getIdValue())
-                .email(user.getEmail().getValue())
-                .password(user.getPassword().getValue())
-                .nickname(user.getNickname().getValue())
+                .email(user.getEmail())
+                .password(user.getPassword())
+                .nickname(user.getNickname())
                 .profileImageUrl(user.getProfileImageUrl())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
@@ -57,9 +56,9 @@ public class UserPersistenceAdapter implements UserRepositoryPort {
     private User toDomain(UserEntity entity) {
         return User.builder()
                 .id(UserId.of(entity.getId()))
-                .email(new Email(entity.getEmail()))
-                .password(new Password(entity.getPassword()))
-                .nickname(new Nickname(entity.getNickname()))
+                .email(entity.getEmail())
+                .password(entity.getPassword())
+                .nickname(entity.getNickname())
                 .profileImageUrl(entity.getProfileImageUrl())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())

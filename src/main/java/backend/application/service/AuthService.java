@@ -8,6 +8,8 @@ import backend.application.port.out.auth.VerificationCodePort;
 import backend.application.port.out.common.EmailServicePort;
 import backend.application.port.out.user.*;
 import backend.domain.user.model.*;
+import backend.exception.user.UserErrorCode;
+import backend.exception.user.UserException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -38,10 +40,8 @@ public class AuthService implements AuthUseCase {
 
     @Override
     public Mono<LoginResult> login(LoginCommand command) {
-        Email email = new Email(command.email());
-
-        return userRepository.findByEmail(email)
-                .switchIfEmpty(Mono.error(new IllegalArgumentException("존재하지 않는 이메일 주소입니다.")))
+        return userRepository.findByEmail(command.email())
+                .switchIfEmpty(Mono.error(new UserException(UserErrorCode.USER_NOT_FOUND)))
                 .flatMap(user -> validatePassword(user, command.password()))
                 .flatMap(this::generateTokens);
     }
@@ -50,18 +50,15 @@ public class AuthService implements AuthUseCase {
     public Mono<RefreshResult> refresh(RefreshCommand command) {
         String refreshToken = command.refreshToken();
 
-        if (!tokenService.validateToken(refreshToken)) {
-            return Mono.error(new IllegalArgumentException("Invalid refresh token"));
-        }
-
         String userId = tokenService.getUserIdFromToken(refreshToken);
 
         return tokenService.validateRefreshToken(userId, refreshToken)
                 .flatMap(isValid -> {
                     if (!isValid) {
-                        return Mono.error(new IllegalArgumentException("Invalid refresh token"));
+                        return Mono.error(new UserException(UserErrorCode.INVALID_REFRESH_TOKEN));
                     }
-                    return userRepository.findById(UserId.of(Long.valueOf(userId)));
+                    return userRepository.findById(UserId.of(Long.valueOf(userId)))
+                            .switchIfEmpty(Mono.error(new UserException(UserErrorCode.USER_NOT_FOUND)));
                 })
                 .flatMap(user -> {
                     String newAccessToken = tokenService.generateAccessToken(user.getId().getValue().toString());
@@ -76,19 +73,15 @@ public class AuthService implements AuthUseCase {
     public Mono<Void> logout(LogoutCommand command) {
         String refreshToken = command.refreshToken();
 
-        if (!tokenService.validateToken(refreshToken)) {
-            return Mono.empty();
-        }
-
         String userId = tokenService.getUserIdFromToken(refreshToken);
         return tokenService.deleteRefreshToken(userId);
     }
 
     private Mono<User> validatePassword(User user, String rawPassword) {
-        String encodedPassword = user.getPassword().getValue();
+        String encodedPassword = user.getPassword();
 
         if (!passwordEncoder.matches(rawPassword, encodedPassword)) {
-            return Mono.error(new IllegalArgumentException("비밀번호가 올바르지 않습니다."));
+            return Mono.error(new UserException(UserErrorCode.INVALID_PASSWORD));
         }
         return Mono.just(user);
     }
@@ -103,23 +96,22 @@ public class AuthService implements AuthUseCase {
                         refreshToken,
                         refreshTokenExpiration,
                         user.getId().getValue().toString(),
-                        user.getEmail().getValue(),
-                        user.getNickname().getValue()
+                        user.getEmail(),
+                        user.getNickname()
                 ));
     }
 
     @Override
     public Mono<Void> sendMagicLink(SendMagicLinkCommand command) {
-        Email email = new Email(command.email());
-
+        String email = command.email();
         return userRepository.existsByEmail(email)
                 .filter(exists -> exists)
-                .switchIfEmpty(Mono.error(new IllegalArgumentException("존재하지 않는 사용자입니다.")))
+                .switchIfEmpty(Mono.error(new UserException(UserErrorCode.USER_NOT_FOUND)))
                 .then(Mono.defer(() -> {
                     String token = magicLinkPort.generateMagicLinkToken();
                     String magicLink = magicLinkBaseUrl + "/auth/magic-login?token=" + token;
-                    return magicLinkPort.storeMagicLinkToken(email.getValue(), token, magicLinkExpirationMs)
-                            .then(emailService.sendMagicLinkEmail(email.getValue(), magicLink));
+                    return magicLinkPort.storeMagicLinkToken(email, token, magicLinkExpirationMs)
+                            .then(emailService.sendMagicLinkEmail(email, magicLink));
                 }));
     }
 
@@ -127,37 +119,35 @@ public class AuthService implements AuthUseCase {
     public Mono<LoginResult> verifyMagicLink(VerifyMagicLinkCommand command) {
         String token = command.token();
 
-        return findEmailByToken(token)
-                .switchIfEmpty(Mono.error(new IllegalArgumentException("유효하지 않거나 만료된 매직링크입니다.")))
+        return findEmailByMagicLinkToken(token)
+                .switchIfEmpty(Mono.error(new UserException(UserErrorCode.INVALID_MAGIC_LINK)))
                 .flatMap(email -> {
-                    Email emailVO = new Email(email);
-                    return userRepository.findByEmail(emailVO)
-                            .switchIfEmpty(Mono.error(new IllegalArgumentException("존재하지 않는 사용자입니다.")))
+                    return userRepository.findByEmail(email)
+                            .switchIfEmpty(Mono.error(new UserException(UserErrorCode.USER_NOT_FOUND)))
                             .flatMap(user -> magicLinkPort.deleteMagicLinkToken(email)
                                     .then(generateTokens(user)));
                 });
     }
 
-    private Mono<String> findEmailByToken(String token) {
+    private Mono<String> findEmailByMagicLinkToken(String token) {
         return magicLinkPort.findEmailByToken(token);
     }
 
     @Override
     public Mono<Void> sendVerificationCode(SendVerificationCodeCommand command) {
-        Email email = new Email(command.email());
-
+        String email = command.email();
         return checkEmailNotExists(email)
                 .then(Mono.defer(() -> {
                     String code = verificationCodePort.generateVerificationCode();
-                    return verificationCodePort.storeVerificationCode(email.getValue(), code, codeExpirationMs)
-                            .then(emailService.sendVerificationEmail(email.getValue(), code));
+                    return verificationCodePort.storeVerificationCode(email, code, codeExpirationMs)
+                            .then(emailService.sendVerificationEmail(email, code));
                 }));
     }
 
-    private Mono<Void> checkEmailNotExists(Email email) {
+    private Mono<Void> checkEmailNotExists(String email) {
         return userRepository.existsByEmail(email)
                 .flatMap(exists -> exists
-                        ? Mono.error(new IllegalArgumentException("이미 가입된 이메일입니다."))
+                        ? Mono.error(new UserException(UserErrorCode.EMAIL_ALREADY_EXISTS))
                         : Mono.empty());
     }
 

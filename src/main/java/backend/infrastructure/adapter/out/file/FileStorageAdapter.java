@@ -1,6 +1,8 @@
 package backend.infrastructure.adapter.out.file;
 
 import backend.application.port.out.common.FileStoragePort;
+import backend.exception.file.FileErrorCode;
+import backend.exception.file.FileException;
 import backend.infrastructure.config.S3Config;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -66,28 +68,38 @@ public class FileStorageAdapter implements FileStoragePort {
         return Mono.fromCallable(() -> Files.createDirectories(filePath.getParent()))
                 .then(DataBufferUtils.write(file.content(), filePath))
                 .then(Mono.fromCallable(() -> "/files/" + directory + "/" + filename))
-                .doOnSuccess(url -> log.debug("Local file saved at path: {}", filePath.toAbsolutePath()));
+                .doOnSuccess(url -> log.debug("Local file saved at path: {}", filePath.toAbsolutePath()))
+                .doOnError(error -> log.error("Local file upload failed", error))
+                .onErrorMap(throwable -> new FileException(FileErrorCode.FILE_UPLOAD_FAILED));
     }
 
     private Mono<String> uploadToS3(FilePart file, String directory, String filename) {
         String key = directory + "/" + filename;
         return DataBufferUtils.join(file.content())
-                .flatMap(dataBuffer -> {
-                    byte[] bytes = new byte[dataBuffer.readableByteCount()];
-                    dataBuffer.read(bytes);
-                    DataBufferUtils.release(dataBuffer);
+                .flatMap(dataBuffer ->
+                        Mono.using(
+                                // 리소스 획득
+                                () -> dataBuffer, buffer -> {
+                                    byte[] bytes = new byte[buffer.readableByteCount()];
+                                    buffer.read(bytes);
 
-                    return Mono.fromFuture(s3AsyncClient.putObject(
-                            PutObjectRequest.builder()
-                                    .bucket(s3Config.getBucket())
-                                    .key(key)
-                                    .contentType(getContentType(filename))
-                                    .build(),
-                            AsyncRequestBody.fromBytes(bytes)
-                    ));
-                })
+                                    return Mono.fromFuture(s3AsyncClient.putObject(
+                                            PutObjectRequest.builder()
+                                                    .bucket(s3Config.getBucket())
+                                                    .key(key)
+                                                    .contentType(getContentType(filename))
+                                                    .build(),
+                                            AsyncRequestBody.fromBytes(bytes)
+                                    ));
+                                },
+                                // 리소스 해제
+                                DataBufferUtils::release
+                        )
+                )
                 .map(response -> s3Config.getBaseUrl() + "/" + key)
-                .doOnSuccess(url -> log.debug("S3 file saved with key: {}", key));
+                .doOnSuccess(url -> log.debug("S3 file saved with key: {}", key))
+                .doOnError(error -> log.error("S3 upload failed for key: {}", key, error))
+                .onErrorMap(throwable -> new FileException(FileErrorCode.FILE_UPLOAD_FAILED));
     }
 
     private Mono<Void> deleteFromLocal(String fileUrl) {
@@ -103,7 +115,7 @@ public class FileStorageAdapter implements FileStoragePort {
                 }
             } catch (Exception e) {
                 log.warn("Failed to delete local file: {}", fileUrl, e);
-                throw new RuntimeException("로컬 파일 삭제 실패: " + fileUrl, e);
+                throw new FileException(FileErrorCode.FILE_DELETE_FAILED);
             }
         });
     }
@@ -119,14 +131,14 @@ public class FileStorageAdapter implements FileStoragePort {
 
     private String getFileExtension(String filename) {
         if (filename == null || !filename.contains(".")) {
-            throw new IllegalArgumentException("유효하지 않은 파일명입니다.");
+            throw new FileException(FileErrorCode.INVALID_FILENAME);
         }
         return filename.substring(filename.lastIndexOf(".") + 1).toLowerCase();
     }
 
     private void validateImageFile(String extension) {
         if (!SUPPORTED_EXTENSIONS.contains(extension)) {
-            throw new IllegalArgumentException("지원하지 않는 파일 형식입니다. 지원 형식: " + SUPPORTED_EXTENSIONS);
+            throw new FileException(FileErrorCode.UNSUPPORTED_FILE_TYPE);
         }
     }
 

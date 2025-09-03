@@ -9,7 +9,6 @@ public interface TokenServicePort {
     boolean validateToken(String token);
     Claims getClaimsFromToken(String token);
     String getUserIdFromToken(String token);
-
     Mono<Void> storeRefreshToken(String userId, String refreshToken);
     Mono<Boolean> validateRefreshToken(String userId, String refreshToken);
     Mono<Void> deleteRefreshToken(String userId);

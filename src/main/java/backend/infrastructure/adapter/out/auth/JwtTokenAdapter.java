@@ -1,6 +1,9 @@
 package backend.infrastructure.adapter.out.auth;
 
 import backend.application.port.out.auth.TokenServicePort;
+import backend.domain.user.model.User;
+import backend.exception.user.UserErrorCode;
+import backend.exception.user.UserException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.JwtParser;
@@ -92,7 +95,7 @@ public class JwtTokenAdapter implements TokenServicePort {
                     .getBody();
         } catch (JwtException | IllegalArgumentException e) {
             log.warn("Failed to parse JWT claims: {}", e.getMessage());
-            throw new IllegalArgumentException("Invalid token", e);
+            throw new UserException(UserErrorCode.INVALID_TOKEN);
         }
     }
 

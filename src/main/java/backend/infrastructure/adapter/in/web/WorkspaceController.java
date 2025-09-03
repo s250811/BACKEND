@@ -2,6 +2,7 @@ package backend.infrastructure.adapter.in.web;
 
 import backend.infrastructure.adapter.in.common.ApiResponseDto;
 import backend.application.port.in.WorkspaceUseCase;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
@@ -16,7 +17,7 @@ public class WorkspaceController {
 
     private final WorkspaceUseCase workspaceUseCase;
 
-    // create workspaces
+    @Operation(summary = "워크스페이스 생성")
     @PostMapping
     public Mono<ApiResponseDto<Void>> createWorkspace(@RequestBody CreateWorkspaceRequest request) {
 
@@ -30,6 +31,7 @@ public class WorkspaceController {
                 .then(Mono.just(ApiResponseDto.createSuccessNoContent(null)));
     }
 
+    @Operation(summary = "워크스페이스 멤버 초대")
     @PostMapping("/invite")
     public Mono<ApiResponseDto<Void>> inviteMember(@RequestBody InviteMemberRequest request) {
 
@@ -41,6 +43,7 @@ public class WorkspaceController {
                 .then(Mono.just(ApiResponseDto.createSuccessNoContent(null)));
     }
 
+    @Operation(summary = "워크스페이스 상세 조회")
     @GetMapping("/{workspaceId}")
     public Mono<ApiResponseDto<GetWorkspaceResponse>> getWorkspaceById(@PathVariable Long workspaceId) {
         return workspaceUseCase.getWorkspaceById(workspaceId)
