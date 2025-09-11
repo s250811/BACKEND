@@ -1,12 +1,14 @@
 package backend.application.service;
 
 import backend.application.port.in.TaskUseCase;
+import backend.application.port.out.event.EventPublishingPort;
 import backend.application.port.out.folder.FolderRepositoryPort;
 import backend.application.port.out.project.ProjectRepositoryPort;
 import backend.application.port.out.task.TaskManagerRepositoryPort;
 import backend.application.port.out.task.TaskRepositoryPort;
 import backend.application.port.out.user.UserRepositoryPort;
 import backend.application.port.out.workspace.WorkspaceMemberRepositoryPort;
+import backend.domain.event.impl.TaskUpdatedEvent;
 import backend.domain.folder.model.Folder;
 import backend.domain.project.model.Project;
 import backend.domain.task.model.Task;
@@ -14,6 +16,8 @@ import backend.domain.task.model.TaskManager;
 import backend.domain.task.model.TaskStatus;
 import backend.domain.user.model.User;
 import backend.domain.user.model.UserId;
+import backend.exception.task.TaskErrorCode;
+import backend.exception.task.TaskException;
 import backend.exception.user.UserErrorCode;
 import backend.exception.user.UserException;
 import backend.exception.workspace.WorkspaceErrorCode;
@@ -37,56 +41,35 @@ public class TaskService implements TaskUseCase {
     private final FolderRepositoryPort folderRepository;
     private final WorkspaceMemberRepositoryPort workspaceMemberRepository;
     private final ProjectRepositoryPort projectRepository;
+    private final EventPublishingPort eventPublisher;
 
     @Override
-    public Mono<Void> createTask(CreateTaskCommand command) {
+    public Mono<Void> createTask(UpdateTaskCommand command) {
         return getCurrentUser()
-                .flatMap(user ->
-                        isWorkspaceMember(command.workspaceId(), user)
-                                .flatMap(isMember -> {
-                                    if (!isMember) {
-                                        return Mono.error(new WorkspaceException(WorkspaceErrorCode.WORKSPACE_ACCESS_DENIED));
-                                    }
-                                    return validateProjectAndWorkspace(command);
-                                })
-                                .flatMap(validatedCommand ->
-                                        validateParentTask(command.parentId(), command.projectId())
-                                                .map(validParentIdOpt ->
-                                                        Task.builder()
-                                                                .projectId(command.projectId())
-                                                                .parentId(validParentIdOpt.orElse(null))
-                                                                .taskName(command.taskName())
-                                                                .taskStatus(TaskStatus.fromString(command.taskStatus()))
-                                                                .startDate(command.startDate())
-                                                                .endDate(command.endDate())
-                                                                .description(command.description())
-                                                                .fileUrl(command.fileUrl())
-                                                                .build()
-                                                )
-                                )
-                                .flatMap(taskRepository::save)
-                                .flatMap(savedTask -> {
-                                    List<Long> managerIds = Optional.ofNullable(command.managerIds())
-                                            .filter(list -> !list.isEmpty())
-                                            .orElse(List.of(user.getId().getValue()));
-
-                                    return Flux.fromIterable(managerIds)
-                                            .distinct()
-                                            .flatMap(managerId -> {
-                                                TaskManager taskManager = TaskManager.builder()
-                                                        .taskId(savedTask.getId().getValue())
-                                                        .userId(managerId)
-                                                        .build();
-                                                return taskManagerRepository.save(taskManager);
-                                            })
-                                            .then(Mono.just(savedTask));
-                                })
+                .flatMap(user -> validateWorkspaceAccess(command.workspaceId(), user))
+                .flatMap(user -> validateProjectAndWorkspace(command)
+                        .thenReturn(user))
+                .flatMap(user -> validateParentTask(command.parentId(), command.projectId())
+                        .map(validParentIdOpt -> createTaskFromCommand(command, validParentIdOpt))
+                        .flatMap(taskRepository::save)
+                        .flatMap(savedTask -> saveTaskManagers(command.managerIds(), savedTask, user)));
+    }
+    @Override
+    public Mono<Void> updateTask(Long taskId, UpdateTaskCommand command) {
+        return getCurrentUser()
+                .flatMap(user -> validateWorkspaceAccess(command.workspaceId(), user))
+                .flatMap(user -> taskRepository.findById(taskId)
+                        .switchIfEmpty(Mono.error(new TaskException(TaskErrorCode.TASK_NOT_FOUND)))
+                        .flatMap(previousTask -> validateUpdateCommand(command)
+                                .thenReturn(previousTask))
+                        .flatMap(previousTask -> processTaskUpdate(previousTask, command, user))
                 )
                 .then();
     }
 
+
     //폴더와 워크스페이스 검증
-    private Mono<CreateTaskCommand> validateProjectAndWorkspace(CreateTaskCommand command) {
+    private Mono<UpdateTaskCommand> validateProjectAndWorkspace(UpdateTaskCommand command) {
         return getProject(command.projectId())
                 .flatMap(project -> getFolder(project.getFolderId())
                         .flatMap(folder -> {
@@ -143,13 +126,75 @@ public class TaskService implements TaskUseCase {
 
     private Mono<User> getCurrentUser() {
         return SecurityUtils.getCurrentUserId()
-                .flatMap(userIdStr -> {
-                    Long userId = Long.valueOf(userIdStr);
+                .flatMap(userId -> {
                     return userRepository.findById(UserId.of(userId))
                             .switchIfEmpty(Mono.error(new UserException(UserErrorCode.USER_NOT_FOUND)));
                 });
     }
 
+    private Mono<User> validateWorkspaceAccess(Long workspaceId, User user) {
+        return workspaceMemberRepository.existsByUserIdAndWorkspaceId(user.getId().getValue(), workspaceId)
+                .flatMap(isMember -> {
+                    if (!isMember) {
+                        return Mono.error(new WorkspaceException(WorkspaceErrorCode.WORKSPACE_ACCESS_DENIED));
+                    }
+                    return Mono.just(user);
+                });
+    }
+    private Task createTaskFromCommand(UpdateTaskCommand command, Optional<Long> parentId) {
+        return Task.builder()
+                .projectId(command.projectId())
+                .parentId(parentId.orElse(null))
+                .taskName(command.taskName())
+                .taskStatus(TaskStatus.fromString(command.taskStatus()))
+                .startDate(command.startDate())
+                .endDate(command.endDate())
+                .description(command.description())
+                .fileUrl(command.fileUrl())
+                .build();
+    }
+    private Mono<Void> saveTaskManagers(List<Long> managerIds, Task savedTask, User currentUser) {
+        List<Long> finalManagerIds = Optional.ofNullable(managerIds)
+                .filter(list -> !list.isEmpty())
+                .orElse(List.of(currentUser.getId().getValue()));
+
+        return Flux.fromIterable(finalManagerIds)
+                .distinct()
+                .flatMap(managerId -> createAndSaveTaskManager(savedTask.getId().getValue(), managerId))
+                .then(publishTaskUpdatedEvent(savedTask));
+    }
+
+    private Mono<TaskManager> createAndSaveTaskManager(Long taskId, Long managerId) {
+        TaskManager taskManager = TaskManager.builder()
+                .taskId(taskId)
+                .userId(managerId)
+                .build();
+        return taskManagerRepository.save(taskManager);
+    }
+    private Mono<Void> validateUpdateCommand(UpdateTaskCommand command) {
+        return validateProjectAndWorkspace(command)
+                .then(validateParentTask(command.parentId(), command.projectId()))
+                .then();
+    }
+    private Mono<Void> publishTaskUpdatedEvent(Task savedTask) {
+        // 변경 사항 여부 검사 없이 이벤트 발행 (알림은 지연돼도 무방하지만, 상태 변경은 즉시 반영되어야 함)
+        TaskUpdatedEvent event = TaskUpdatedEvent.builder()
+                .param(savedTask)
+                .build();
+        return eventPublisher.publishEvent(event);
+    }
+    private Mono<Void> processTaskUpdate(Task previousTask, UpdateTaskCommand command, User currentUser) {
+        return validateUpdateCommand(command)
+                .then(Mono.fromCallable(() -> previousTask.updateWith(command, previousTask)))
+                .flatMap(taskRepository::save)
+                .flatMap(savedTask -> updateTaskManagers(savedTask, command.managerIds(), currentUser).thenReturn(savedTask))
+                .flatMap(this::publishTaskUpdatedEvent);
+    }
+    private Mono<Void> updateTaskManagers(Task savedTask, List<Long> managerIds, User currentUser) {
+        return taskManagerRepository.deleteByTaskId(savedTask.getId().getValue())
+                .then(saveTaskManagers(managerIds, savedTask, currentUser))
+                .then();
+    }
     @Override
     public Mono<TaskDetailResult> getTaskDetail(Long taskId) {
         return null;

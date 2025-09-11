@@ -10,23 +10,23 @@ public interface UserUseCase {
             String nickname
     ) {}
     record RegisterUserResult(
-            String userId,
+            Long userId,
             String email,
             String nickname
     ) {}
     record UserProfileResult(
-            String userId,
+            Long userId,
             String email,
             String nickname,
             String profileImageUrl
     ) {}
     record UpdateProfileCommand(
-            String userId,
+            Long userId,
             String nickname,
             FilePart file
     ) {}
     record UpdateProfileResult(
-            String userId,
+            Long userId,
             String email,
             String nickname,
             String profileImageUrl
@@ -34,7 +34,7 @@ public interface UserUseCase {
     record CheckEmailDuplicateCommand(String email){}
 
     Mono<RegisterUserResult> register(RegisterUserCommand command, String verificationCode);
-    Mono<UserProfileResult>  getUserProfile(String s);
+    Mono<UserProfileResult>  getUserProfile(Long id);
     Mono<UpdateProfileResult> updateProfile(UpdateProfileCommand command);
     Mono<Void> checkEmailDuplicate(CheckEmailDuplicateCommand command);
 }

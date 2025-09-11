@@ -7,7 +7,7 @@ import reactor.core.publisher.Mono;
 @Component
 public class SecurityUtils {
 
-    public static Mono<String> getCurrentUserId() {
+    public static Mono<Long> getCurrentUserId() {
         return ReactiveSecurityContextHolder.getContext()
                 .map(context -> context.getAuthentication().getPrincipal())
                 .cast(JwtAuthenticationManager.AuthenticatedUser.class)

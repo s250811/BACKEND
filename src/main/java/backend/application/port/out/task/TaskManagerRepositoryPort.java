@@ -5,4 +5,5 @@ import reactor.core.publisher.Mono;
 
 public interface TaskManagerRepositoryPort {
     Mono<TaskManager> save(TaskManager taskManager);
+    Mono<Void> deleteByTaskId(Long TaskId);
 }

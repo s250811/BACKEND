@@ -162,12 +162,92 @@ CREATE TABLE IF NOT EXISTS trash (
 
 CREATE INDEX IF NOT EXISTS idx_trash_bin_deleted_by_user_id ON trash(deleted_by_user_id);
 CREATE INDEX IF NOT EXISTS idx_trash_bin_deleted_at ON trash(deleted_at);
+-- Comment 테이블
+CREATE TABLE IF NOT EXISTS comment (
+                                       id BIGSERIAL PRIMARY KEY,
+                                       task_id BIGINT NOT NULL,
+                                       user_id BIGINT NOT NULL,
+                                       content VARCHAR(2000) NOT NULL,
+    file_url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 
--- 비밀번호는 "password"를 BCrypt로 해싱한 값입니다.
+                             FOREIGN KEY (task_id) REFERENCES task(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES "user"(id) ON DELETE CASCADE
+    );
+
+-- Comment 인덱스
+CREATE INDEX IF NOT EXISTS idx_comment_task_id ON comment(task_id);
+CREATE INDEX IF NOT EXISTS idx_comment_user_id ON comment(user_id);
+CREATE INDEX IF NOT EXISTS idx_comment_created_at ON comment(created_at);
+
+-- EventAudit 테이블
+CREATE TABLE IF NOT EXISTS event_audit (
+                                           id BIGSERIAL PRIMARY KEY,
+                                           event_id VARCHAR(255) NOT NULL,
+    event_type VARCHAR(100) NOT NULL,
+    consumer_topic VARCHAR(100) NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    CONSTRAINT status_check CHECK (status IN ('PROCESSING', 'SUCCESS', 'FAILED')),
+    error_message TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                             );
+
+-- EventAudit 인덱스
+CREATE INDEX IF NOT EXISTS idx_event_audit_event_id ON event_audit(event_id);
+CREATE INDEX IF NOT EXISTS idx_event_audit_event_type ON event_audit(event_type);
+CREATE INDEX IF NOT EXISTS idx_event_audit_consumer_topic ON event_audit(consumer_topic);
+CREATE INDEX IF NOT EXISTS idx_event_audit_status ON event_audit(status);
+CREATE INDEX IF NOT EXISTS idx_event_audit_created_at ON event_audit(created_at);
+
+-- 실패한 이벤트 조회를 위한 복합 인덱스
+CREATE INDEX IF NOT EXISTS idx_event_audit_failed_events ON event_audit(status, consumer_topic, created_at)
+    WHERE status = 'FAILED';
+
+-- Notification 테이블
+CREATE TABLE IF NOT EXISTS notification (
+                                            id BIGSERIAL PRIMARY KEY,
+                                            recipient_id BIGINT NOT NULL,
+                                            sender_id BIGINT NOT NULL,
+                                            is_read BOOLEAN NOT NULL DEFAULT FALSE,
+                                            event_id VARCHAR(255) NOT NULL,
+    type VARCHAR(100) NOT NULL,
+    CONSTRAINT notification_type_check CHECK (type IN (
+                                              'TASK_ASSIGNED',
+                                              'TASK_STATUS_CHANGED',
+                                              'TASK_FIELDS_CHANGED',
+                                              'TASK_MENTION_IN_DESCRIPTION',
+                                              'COMMENT_MENTION',
+                                              'SUBTASK_CREATED'
+                                                      )),
+    message TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    read_at TIMESTAMP WITH TIME ZONE,
+
+                          FOREIGN KEY (recipient_id) REFERENCES "user"(id) ON DELETE CASCADE,
+    FOREIGN KEY (sender_id) REFERENCES "user"(id) ON DELETE CASCADE
+    );
+
+-- Notification 인덱스
+CREATE INDEX IF NOT EXISTS idx_notification_recipient_id ON notification(recipient_id);
+CREATE INDEX IF NOT EXISTS idx_notification_sender_id ON notification(sender_id);
+CREATE INDEX IF NOT EXISTS idx_notification_event_id ON notification(event_id);
+CREATE INDEX IF NOT EXISTS idx_notification_type ON notification(type);
+CREATE INDEX IF NOT EXISTS idx_notification_created_at ON notification(created_at);
+CREATE INDEX IF NOT EXISTS idx_notification_is_read ON notification(is_read);
+
+-- 읽지 않은 알림 조회를 위한 복합 인덱스
+CREATE INDEX IF NOT EXISTS idx_notification_unread ON notification(recipient_id, is_read, created_at)
+    WHERE is_read = FALSE;
+
+-- 특정 사용자의 알림 목록 조회를 위한 복합 인덱스
+CREATE INDEX IF NOT EXISTS idx_notification_recipient_created_desc ON notification(recipient_id, created_at DESC);
+
 INSERT INTO "user" (email, password, nickname, created_at, updated_at)
 VALUES (
            'user1@example.com',
-           'password',
+           'Password123',
            'root',
            CURRENT_TIMESTAMP,
            CURRENT_TIMESTAMP
@@ -176,7 +256,7 @@ VALUES (
 INSERT INTO "user" (email, password, nickname, created_at, updated_at)
 VALUES (
            'user2@example.com',
-           'password',
+           'Password123',
            'root12',
            CURRENT_TIMESTAMP,
            CURRENT_TIMESTAMP

@@ -34,11 +34,11 @@ public class JwtAuthenticationManager implements ReactiveAuthenticationManager {
 
         return userRepository.findById(UserId.of(Long.valueOf(userId)))
                 .map(user -> new UsernamePasswordAuthenticationToken(
-                        new AuthenticatedUser(user.getId().getValue().toString(), user.getEmail()),
+                        new AuthenticatedUser(user.getId().getValue(), user.getEmail()),
                         token,
                         Collections.singletonList(new SimpleGrantedAuthority("MEMBER"))
                 ));
     }
 
-    public record AuthenticatedUser(String userId, String email) {}
+    public record AuthenticatedUser(Long userId, String email) {}
 }

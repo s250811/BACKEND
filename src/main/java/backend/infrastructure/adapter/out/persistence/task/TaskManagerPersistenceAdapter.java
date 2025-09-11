@@ -19,6 +19,11 @@ public class TaskManagerPersistenceAdapter implements TaskManagerRepositoryPort 
                 .map(TaskManagerPersistenceAdapter::toDomain);
     }
 
+    @Override
+    public Mono<Void> deleteByTaskId(Long taskId) {
+        return repository.deleteByTaskId(taskId);
+    }
+
     public static TaskManager toDomain(TaskManagerEntity entity) {
         return TaskManager.builder()
                 .id(TaskManagerId.of(entity.getId()))

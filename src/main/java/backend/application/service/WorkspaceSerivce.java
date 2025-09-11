@@ -94,8 +94,7 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
     // 유저 조회
     private Mono<User> getCurrentUser() {
         return SecurityUtils.getCurrentUserId()
-                .flatMap(userIdStr -> {
-                    Long userId = Long.valueOf(userIdStr);
+                .flatMap(userId -> {
                     return userRepository.findById(UserId.of(userId))
                             .switchIfEmpty(Mono.error(new UserException(UserErrorCode.USER_NOT_FOUND)));
                 });
