@@ -38,4 +38,19 @@ public class Workspace extends AggregateRoot<WorkspaceId> {
     public Long getIdValue() {
         return this.id != null ? this.id.getValue() : null;
     }
+
+    public void updateWorkspaceName(String workspaceName) {
+            this.workspaceName = workspaceName;
+            this.updatedAt = LocalDateTime.now();
+    }
+
+    public void updateWorkspaceImgUrl(String workspaceImgUrl) {
+            this.workspaceImgUrl = workspaceImgUrl;
+            this.updatedAt = LocalDateTime.now();
+    }
+
+    public void updateDescription(String description) {
+            this.description = description;
+            this.updatedAt = LocalDateTime.now();
+    }
 }
