@@ -7,10 +7,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface TaskUseCase {
-    Mono<Void> createTask(CreateTaskCommand command);
+    Mono<Void> createTask(UpdateTaskCommand command);
     Mono<TaskDetailResult> getTaskDetail(Long taskId);
+    Mono<Void> updateTask(Long taskId, UpdateTaskCommand command);
 
-    record CreateTaskCommand(
+    record UpdateTaskCommand(
             Long projectId,
             Long workspaceId,
             Long parentId,
@@ -27,11 +28,8 @@ public interface TaskUseCase {
             Long taskId,
             String taskName,
             String status,
-
             LocalDateTime startedAt,
-
             LocalDateTime endedAt,
-
             String description,
             String fileUrl,
             List<ManagerResponse> managers
@@ -39,8 +37,8 @@ public interface TaskUseCase {
         public record ManagerResponse(Long userId, String nickname) {}
     }
 
-    public static CreateTaskCommand from(TaskController.CreatRequest request) {
-        return new CreateTaskCommand(
+    public static UpdateTaskCommand from(TaskController.CreatRequest request) {
+        return new UpdateTaskCommand(
                 request.projectId(),
                 request.workspaceId(),
                 request.parentId(),

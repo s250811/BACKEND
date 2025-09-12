@@ -1,8 +1,8 @@
 spring:
   r2dbc:
-    url: r2dbc:postgresql://localhost:5432/pmDatabase?sslMode=disable
-    username: root
-    password: password
+    url: ${DATABASE_URL:r2dbc:postgresql://database-1.c5e2usce6r1z.ap-northeast-2.rds.amazonaws.com:5432/pmDatabase?sslMode=require}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
   data:
     redis:
       host: localhost
@@ -11,5 +11,6 @@ spring:
 
 logging:
   level:
-    backend: DEBUG
-    org.springframework.r2dbc: DEBUG
+    io.r2dbc.postgresql.client.ParameterBinding: TRACE
+    io.r2dbc.postgresql: DEBUG
+    org.springframework.r2dbc.connection: DEBUG

@@ -71,7 +71,7 @@ public class UserService implements UserUseCase {
 
     private RegisterUserResult toRegisterResult(User user) {
         return new UserUseCase.RegisterUserResult(
-                user.getId().getValue().toString(),
+                user.getId().getValue(),
                 user.getEmail(),
                 user.getNickname()
         );
@@ -79,11 +79,11 @@ public class UserService implements UserUseCase {
     @Override
     @Cacheable(value = "user:profile", key = "#userId")
     @Transactional(readOnly = true)
-    public Mono<UserProfileResult> getUserProfile(String userId) {
-        return userRepository.findById(UserId.of(Long.valueOf(userId)))
+    public Mono<UserProfileResult> getUserProfile(Long userId) {
+        return userRepository.findById(UserId.of(userId))
                 .switchIfEmpty(Mono.error(new UserException(UserErrorCode.USER_NOT_FOUND)))
                 .map(user -> new UserProfileResult(
-                        user.getId().getValue().toString(),
+                        user.getId().getValue(),
                         user.getEmail(),
                         user.getNickname(),
                         user.getProfileImageUrl()
@@ -103,11 +103,7 @@ public class UserService implements UserUseCase {
                             : Mono.just(user.getProfileImageUrl());
 
                     return imageUrlMono.flatMap(imageUrl -> {
-                        String nickname = command.nickname() != null
-                                ? command.nickname()
-                                : user.getNickname();
-
-                        user.updateProfile(nickname, imageUrl);
+                        user.updateProfile(command.nickname(), imageUrl);
                         return userRepository.save(user)
                                 .doOnSuccess(savedUser -> {
                                     // 트랜잭션 커밋 후 기존 이미지는 비동기로 별도 스레드에서 삭제 (실패해도 메인 플로우에 영향 X)
@@ -118,7 +114,7 @@ public class UserService implements UserUseCase {
                     });
                 })
                 .map(user -> new UpdateProfileResult(
-                        user.getId().getValue().toString(),
+                        user.getId().getValue(),
                         user.getEmail(),
                         user.getNickname(),
                         user.getProfileImageUrl()

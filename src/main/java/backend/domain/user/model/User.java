@@ -3,7 +3,6 @@ package backend.domain.user.model;
 import backend.domain.common.AggregateRoot;
 import lombok.Builder;
 import lombok.Getter;
-import software.amazon.awssdk.services.s3.endpoints.internal.Value;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -42,12 +41,8 @@ public class User extends AggregateRoot<UserId> {
     }
 
     public void updateProfile(String nickname, String profileImageUrl) {
-        if (nickname != null) {
-            this.nickname = nickname;
-        }
-        if (profileImageUrl != null) {
-            this.profileImageUrl = profileImageUrl;
-        }
+        this.nickname = nickname != null ? nickname : this.nickname;
+        this.profileImageUrl = profileImageUrl != null ? profileImageUrl : this.profileImageUrl;
         this.updatedAt = LocalDateTime.now();
     }
 
