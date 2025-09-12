@@ -8,19 +8,47 @@ import java.util.List;
 // service interface
 public interface WorkspaceUseCase {
 
+    Mono<Void> inviteMember(InviteMemberCommand command);
+    Mono<GetWorkspaceResult> getWorkspaceById(Long workspaceId);
+    Mono<Void> createOrUpdateWorkspace(CreateWorkspaceCommand command);
+
+
+    /**
+     * 생성
+     * @param workspaceName
+     * @param workspaceUrl
+     * @param description
+     */
     record CreateWorkspaceCommand(
+            Long workspaceId,
             String workspaceName,
             String workspaceUrl,
             String description
-    ){}
+    ){
+        public boolean isUpdateMode() {
+            return workspaceId != null;
+        }
+    }
+
+    /**
+     * 워크스페이스에 멤버를 초대
+     * @param workspaceId
+     */
 
     record InviteMemberCommand(
             Long workspaceId
     ){}
 
     /**
-     * 조회된 워크스페이스의 모든 상세 정보를 담는 Result 객체입니다.
-     * 워크스페이스의 기본 정보, 멤버, 그리고 폴더/프로젝트/태스크의 전체 계층 구조를 포함합니다.
+     * 워크스페이스 상세 정보를 나타냅니다.
+     * @param workspaceId
+     * @param workspaceName
+     * @param imageUrl
+     * @param description
+     * @param owner
+     * @param members
+     * @param folders
+     * @param createdAt
      */
     record GetWorkspaceResult(
             Long workspaceId,
@@ -70,9 +98,4 @@ public interface WorkspaceUseCase {
             String taskName,
             String status
     ) {}
-
-    Mono<Void> createWorkspace(CreateWorkspaceCommand command);
-    Mono<Void> inviteMember(InviteMemberCommand command);
-
-    Mono<GetWorkspaceResult> getWorkspaceById(Long workspaceId);
 }
