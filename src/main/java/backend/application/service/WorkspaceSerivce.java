@@ -193,7 +193,7 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
      */
     private Mono<List<FolderInfo>> buildHierarchicalStructure(Long workspaceId) {
         // 모든 폴더를 한 번에 조회
-        Mono<List<Folder>> foldersMono = folderRepository.findAllByWorkspaceId(new WorkspaceId(workspaceId))
+        Mono<List<Folder>> foldersMono = folderRepository.findAllByWorkspaceId(workspaceId)
                 .collectList();
 
         // 모든 프로젝트를 한 번에 조회
