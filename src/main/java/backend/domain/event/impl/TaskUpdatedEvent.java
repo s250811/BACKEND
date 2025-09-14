@@ -13,4 +13,8 @@ public class TaskUpdatedEvent extends Event<Task> {
     public TaskUpdatedEvent(Task param) {
         super(EventType.TASK_UPDATED, param);
     }
+    @Override
+    public String getPartitionKey() {
+        return getParam().getId().getValue().toString();
+    }
 }

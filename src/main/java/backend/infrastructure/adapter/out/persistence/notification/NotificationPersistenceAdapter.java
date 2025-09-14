@@ -55,10 +55,11 @@ public class NotificationPersistenceAdapter implements NotificationRepositoryPor
                 .id(notification.getIdValue())
                 .recipientId(notification.getRecipientId().getValue())
                 .senderId(notification.getSenderId().getValue())
-                .message(notification.getMessage())
                 .isRead(notification.getIsRead())
-                .createdAt(notification.getCreatedAt())
+                .eventId(notification.getEventId().getValue())
+                .type(notification.getType())
                 .readAt(notification.getReadAt())
+                .message(notification.getMessage())
                 .build();
     }
 
@@ -66,15 +67,14 @@ public class NotificationPersistenceAdapter implements NotificationRepositoryPor
     private Notification toDomain(NotificationEntity entity) {
         return new Notification(
                 NotificationId.of(entity.getId()),
-                UserId.of(entity.getRecipientId()),
                 UserId.of(entity.getSenderId()),
+                UserId.of(entity.getRecipientId()),
                 entity.getIsRead(),
                 EventId.of(entity.getEventId()),
                 entity.getType(),
                 entity.getCreatedAt(),
                 entity.getReadAt(),
-                entity.getMessage(),
-        null
-                );
+                entity.getMessage()
+        );
     }
 }

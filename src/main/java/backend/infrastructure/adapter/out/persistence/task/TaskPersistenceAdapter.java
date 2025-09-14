@@ -4,6 +4,7 @@ import backend.application.port.out.task.TaskRepositoryPort;
 import backend.domain.project.model.ProjectId;
 import backend.domain.task.model.Task;
 import backend.domain.task.model.TaskId;
+import backend.domain.user.model.UserId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
@@ -39,12 +40,13 @@ public class TaskPersistenceAdapter implements TaskRepositoryPort {
 
     private static TaskEntity toEntity(Task task) {
         return TaskEntity.builder()
-                .id(task.getIdValue())
+                .id(task.getId() != null ? task.getIdValue() : null)
                 .projectId(task.getProjectId())
                 .parentId(task.getParentId())
                 .taskName(task.getTaskName())
                 .taskStatus(task.getTaskStatus())
                 .description(task.getDescription())
+                .managerIds(task.getManagerIds())
                 .fileUrl(task.getFileUrl())
                 .startDate(task.getStartDate())
                 .endDate(task.getEndDate())
@@ -62,12 +64,14 @@ public class TaskPersistenceAdapter implements TaskRepositoryPort {
                 .taskName(entity.getTaskName())
                 .taskStatus(entity.getTaskStatus())
                 .description(entity.getDescription())
+                .managerIds(entity.getManagerIds())
                 .fileUrl(entity.getFileUrl())
                 .startDate(entity.getStartDate())
                 .endDate(entity.getEndDate())
                 .isDeleted(entity.isDeleted())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
+                .lastModifiedBy(UserId.of(entity.getLastModifiedBy()))
                 .build();
     }
 }
