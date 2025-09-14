@@ -53,11 +53,8 @@ public class KafkaConfig {
         ConcurrentKafkaListenerContainerFactory<String, Object> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
-
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
-
         factory.setConcurrency(3);
-
         return factory;
     }
 
@@ -68,7 +65,7 @@ public class KafkaConfig {
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
 
-        props.put(JsonDeserializer.TRUSTED_PACKAGES, "backend.domain.event,backend.domain.event.impl,java.util");
+        props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
         props.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, "true");
         props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "backend.domain.event.Event");
 
