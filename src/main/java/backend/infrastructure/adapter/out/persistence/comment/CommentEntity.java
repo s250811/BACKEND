@@ -19,14 +19,14 @@ public class CommentEntity implements Persistable<Long> {
     @Id
     private Long id;
     private Long taskId;
-    @LastModifiedBy
-    private Long userId;
     private String content;
     private String fileUrl;
     @CreatedDate
     private LocalDateTime createdAt;
     @LastModifiedDate
     private LocalDateTime updatedAt;
+    @LastModifiedBy
+    private Long lastModifiedBy;
 
     @Override
     @Transient

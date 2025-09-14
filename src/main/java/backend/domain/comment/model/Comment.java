@@ -5,8 +5,6 @@ import backend.domain.task.model.TaskId;
 import backend.domain.user.model.UserId;
 import lombok.Builder;
 import lombok.Getter;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -17,29 +15,29 @@ import java.util.regex.Pattern;
 @Getter
 public class Comment extends AggregateRoot<CommentId> implements Serializable {
     private TaskId taskId;
-    private UserId userId;
     private String content;
     private String fileUrl;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private UserId lastModifiedBy;
 
     @Builder
-    public Comment(CommentId id, TaskId taskId, UserId userId, String content, String fileUrl,
-                   LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public Comment(CommentId id, TaskId taskId, String content, String fileUrl,
+                   LocalDateTime createdAt, LocalDateTime updatedAt, UserId lastModifiedBy) {
         this.id = id;
         this.taskId = taskId;
-        this.userId = userId;
         this.content = content;
         this.fileUrl = fileUrl;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.lastModifiedBy = lastModifiedBy;
     }
 
     public Long getIdValue() {
         return this.id != null ? this.id.getValue() : null;
     }
-    public Long getUserIdValue() {
-        return this.userId != null ? this.userId.getValue() : null;
+    public Long getLastModifiedBy() {
+        return this.lastModifiedBy != null ? this.lastModifiedBy.getValue() : null;
     }
     public void updateContent(String newContent) {
         this.content = newContent;

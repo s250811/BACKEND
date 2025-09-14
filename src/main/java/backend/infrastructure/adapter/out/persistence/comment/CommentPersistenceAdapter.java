@@ -22,24 +22,22 @@ public class CommentPersistenceAdapter implements CommentRepositoryPort {
         return CommentEntity.builder()
                 .id(comment.getIdValue())
                 .taskId(comment.getTaskId().getValue())
-                .userId(comment.getUserId().getValue())
                 .content(comment.getContent())
                 .createdAt(comment.getCreatedAt())
                 .updatedAt(comment.getUpdatedAt())
+                .lastModifiedBy(comment.getLastModifiedBy())
                 .build();
-
     }
 
     private Comment toDomain(CommentEntity entity) {
         return Comment.builder()
                 .id(CommentId.of(entity.getId()))
                 .taskId(TaskId.of(entity.getTaskId()))
-                .userId(UserId.of(entity.getUserId()))
                 .content(entity.getContent())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
+                .lastModifiedBy(UserId.of(entity.getLastModifiedBy()))
                 .build();
-
     }
 
     @Override
