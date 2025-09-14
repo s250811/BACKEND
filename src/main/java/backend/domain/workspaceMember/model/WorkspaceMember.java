@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 public class WorkspaceMember extends AggregateRoot<WorkspaceMemberId> {
 
     private WorkspaceId workspaceId;
-    private UserId userId;
+    private Long userId;
     private String nickname;
     private String description;
     private WorkspaceMemberRole role;
@@ -24,7 +24,7 @@ public class WorkspaceMember extends AggregateRoot<WorkspaceMemberId> {
     private LocalDateTime updatedAt;
 
     @Builder
-    public WorkspaceMember(WorkspaceMemberId id, WorkspaceId workspaceId, UserId userId,
+    public WorkspaceMember(WorkspaceMemberId id, WorkspaceId workspaceId, Long userId,
                            String nickname, String description, WorkspaceMemberRole role,
                            boolean isDeleted, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
@@ -38,7 +38,7 @@ public class WorkspaceMember extends AggregateRoot<WorkspaceMemberId> {
         this.updatedAt = updatedAt;
     }
 
-    public static WorkspaceMember createOwner(UserId id, WorkspaceId id1) {
+    public static WorkspaceMember createOwner(Long id, WorkspaceId id1) {
         return WorkspaceMember.builder()
                 .userId(id)
                 .workspaceId(id1)
