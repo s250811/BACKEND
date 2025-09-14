@@ -12,11 +12,11 @@ import lombok.Builder;
  */
 public class TaskStatusChangedNotification extends Notification {
     @Builder
-    public TaskStatusChangedNotification(NotificationId id, UserId recipientId, UserId senderId, Boolean isRead,
+    public TaskStatusChangedNotification(NotificationId id, UserId senderId, UserId recipientId, Boolean isRead,
                                          backend.domain.event.EventId eventId,
                                          java.time.LocalDateTime createdAt, java.time.LocalDateTime readAt,
                                          String message, Task param) {
-        super(id, recipientId, senderId, isRead, eventId, NotificationType.TASK_STATUS_CHANGED, createdAt, readAt, message, param);
+        super(id, senderId, recipientId, isRead, eventId, NotificationType.TASK_STATUS_CHANGED, createdAt, readAt, message, param);
     }
 
     @Override

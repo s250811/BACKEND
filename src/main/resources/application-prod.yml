@@ -1,6 +1,6 @@
 spring:
   r2dbc:
-    url: ${DATABASE_URL:r2dbc:postgresql://database-1.c5e2usce6r1z.ap-northeast-2.rds.amazonaws.com:5432/pmDatabase?sslMode=require}
+    url: ${DATABASE_URL:r2dbc:postgresql://database-1.c5e2usce6r1z.ap-northeast-2.rds.amazonaws.com:5432/pmDatabase?sslMode=require&timezone=Asia/Seoul}
     username: ${DATABASE_USERNAME:postgres}
     password: ${DATABASE_PASSWORD:postgres}
   data:

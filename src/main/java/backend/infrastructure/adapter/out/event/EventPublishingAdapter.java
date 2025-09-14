@@ -5,12 +5,10 @@ import backend.domain.event.Event;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 import java.io.Serializable;
-import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Component
@@ -22,24 +20,24 @@ public class EventPublishingAdapter implements EventPublishingPort {
 
     @Override
     public <T extends Serializable> Mono<Void> publishEvent(Event<T> event) {
-        String key = event.getId().getValue().toString();
-        return Mono.fromFuture(() -> {
-            CompletableFuture<SendResult<String, Object>> future =
-                    kafkaTemplate.send(NOTIFICATION_TOPIC, key, event);
-
-            return future.handle((result, throwable) -> {
-                if (throwable != null) {
-                    log.error("이벤트 발행 실패: eventType={}, eventId={}",
-                            event.getType(), event.getId(), throwable);
-                    throw new RuntimeException("이벤트 발행 실패", throwable);
-                } else {
-                    log.debug("이벤트 발행 성공: partition={}, offset={}, eventId={}",
-                            result.getRecordMetadata().partition(),
-                            result.getRecordMetadata().offset(),
-                            event.getId());
-                    return result;
-                }
-            });
-        }).then();
+        String partitionKey = event.getPartitionKey(); // 각 엔티티 순서 보장하기 위한 key
+        return Mono.fromFuture(() -> kafkaTemplate.send(NOTIFICATION_TOPIC, partitionKey, event))
+                .doOnSuccess(result -> log.debug("이벤트 발행 성공: partition={}, offset={}, eventId={}",
+                        result.getRecordMetadata().partition(),
+                        result.getRecordMetadata().offset(),
+                        event.getId()))
+                .onErrorResume(throwable -> {
+                    // Kafka Producer의 모든 retry가 실패한 후에만 실행됨
+                    if (throwable instanceof org.apache.kafka.common.errors.TimeoutException ||
+                            throwable instanceof org.apache.kafka.common.errors.RetriableException) {
+                        log.error("이벤트 발행 최종 실패 (모든 retry 소진): eventType={}, eventId={}",
+                                event.getType(), event.getId(), throwable);
+                        // 비즈니스 로직에 영향을 주지 않도록 에러 무시
+                        return Mono.empty();
+                    }
+                    // 다른 에러는 전파
+                    return Mono.error(throwable);
+                })
+                .then();
     }
 }

@@ -1,3 +1,7 @@
+-- 현재 세션 및 데이터베이스 타임존 설정
+SET timezone = 'Asia/Seoul';
+ALTER DATABASE postgres SET timezone = 'Asia/Seoul';
+
 -- 테이블 조건부 초기화
 CREATE SCHEMA IF NOT EXISTS public;
 
@@ -120,9 +124,11 @@ CREATE TABLE IF NOT EXISTS task (
                                     end_date TIMESTAMP WITH TIME ZONE,
                                     created_at TIMESTAMP WITH TIME ZONE,
                                     updated_at TIMESTAMP WITH TIME ZONE,
+                                    last_modified_by BIGINT,
 
                                     FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE,
                                     FOREIGN KEY (parent_id) REFERENCES task(id) ON DELETE CASCADE,
+                                    FOREIGN KEY (last_modified_by) REFERENCES "user"(id) ON DELETE SET NULL,
 
                                     CONSTRAINT chk_parent_id_not_self CHECK (id <> parent_id)
 );
@@ -243,21 +249,3 @@ CREATE INDEX IF NOT EXISTS idx_notification_unread ON notification(recipient_id,
 
 -- 특정 사용자의 알림 목록 조회를 위한 복합 인덱스
 CREATE INDEX IF NOT EXISTS idx_notification_recipient_created_desc ON notification(recipient_id, created_at DESC);
-
-INSERT INTO "user" (email, password, nickname, created_at, updated_at)
-VALUES (
-           'user1@example.com',
-           'Password123',
-           'root',
-           CURRENT_TIMESTAMP,
-           CURRENT_TIMESTAMP
-       ) ON CONFLICT (email) DO NOTHING;
-
-INSERT INTO "user" (email, password, nickname, created_at, updated_at)
-VALUES (
-           'user2@example.com',
-           'Password123',
-           'root12',
-           CURRENT_TIMESTAMP,
-           CURRENT_TIMESTAMP
-       ) ON CONFLICT (email) DO NOTHING;

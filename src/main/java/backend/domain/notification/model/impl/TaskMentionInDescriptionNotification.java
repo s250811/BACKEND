@@ -5,6 +5,7 @@ import backend.domain.notification.model.Notification;
 import backend.domain.notification.model.NotificationId;
 import backend.domain.notification.model.NotificationType;
 import backend.domain.task.model.Task;
+import backend.domain.user.model.User;
 import backend.domain.user.model.UserId;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,8 +20,8 @@ import java.time.LocalDateTime;
 public class TaskMentionInDescriptionNotification extends Notification {
 
     @Builder
-    public TaskMentionInDescriptionNotification(NotificationId id, UserId recipientId, UserId senderId, Boolean isRead, EventId eventId, NotificationType type, LocalDateTime createdAt, LocalDateTime readAt, String message, Task param) {
-        super(id, recipientId, senderId, isRead, eventId, type, createdAt, readAt, message, param);
+    public TaskMentionInDescriptionNotification(NotificationId id, UserId senderId, UserId recipientId, Boolean isRead, EventId eventId, NotificationType type, LocalDateTime createdAt, LocalDateTime readAt, String message, Task param) {
+        super(id, senderId, recipientId, isRead, eventId, type, createdAt, readAt, message, param);
     }
 
     @Override

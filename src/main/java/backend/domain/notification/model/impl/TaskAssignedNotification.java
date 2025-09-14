@@ -12,11 +12,11 @@ import lombok.Builder;
  */
 public class TaskAssignedNotification extends Notification {
     @Builder
-    public TaskAssignedNotification(NotificationId id, UserId recipientId, UserId senderId, Boolean isRead,
+    public TaskAssignedNotification(NotificationId id, UserId senderId, UserId recipientId, Boolean isRead,
                                     backend.domain.event.EventId eventId,
                                     java.time.LocalDateTime createdAt, java.time.LocalDateTime readAt,
                                     String message, Task param) {
-        super(id, recipientId, senderId, isRead, eventId, NotificationType.TASK_ASSIGNED, createdAt, readAt, message, param);
+        super(id, senderId, recipientId, isRead, eventId, NotificationType.TASK_ASSIGNED, createdAt, readAt, message, param);
     }
 
     @Override

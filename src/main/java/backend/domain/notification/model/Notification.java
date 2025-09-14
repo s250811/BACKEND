@@ -13,8 +13,8 @@ import java.io.Serializable;
 
 @Getter
 public class Notification extends AggregateRoot<NotificationId> implements Serializable {
-    private UserId recipientId;
     private UserId senderId;
+    private UserId recipientId;
     private Boolean isRead;
     private EventId eventId;
     private NotificationType type;
@@ -23,11 +23,11 @@ public class Notification extends AggregateRoot<NotificationId> implements Seria
     private String message;
     private Task param;
 
-    public Notification(NotificationId id, UserId recipientId, UserId senderId, Boolean isRead, EventId eventId,
+    public Notification(NotificationId id, UserId senderId, UserId recipientId, Boolean isRead, EventId eventId,
                         NotificationType type, LocalDateTime createdAt, LocalDateTime readAt, String message, Task param) {
         this.id = id;
-        this.recipientId = recipientId;
         this.senderId = senderId;
+        this.recipientId = recipientId;
         this.isRead = isRead;
         this.eventId = eventId;
         this.type = type;
@@ -35,6 +35,18 @@ public class Notification extends AggregateRoot<NotificationId> implements Seria
         this.readAt = readAt;
         this.message = message;
         this.param = param;
+    }
+    public Notification(NotificationId id, UserId senderId, UserId recipientId, Boolean isRead, EventId eventId,
+                        NotificationType type, LocalDateTime createdAt, LocalDateTime readAt, String message) {
+        this.id = id;
+        this.senderId = senderId;
+        this.recipientId = recipientId;
+        this.isRead = isRead;
+        this.eventId = eventId;
+        this.type = type;
+        this.createdAt = createdAt;
+        this.readAt = readAt;
+        this.message = message;
     }
     public Long getIdValue() {
         return this.getId() != null ? this.getId().getValue() : null;

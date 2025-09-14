@@ -11,9 +11,6 @@ import backend.domain.notification.model.Notification;
 import backend.domain.notification.model.impl.*;
 import backend.domain.task.model.Task;
 import backend.domain.user.model.UserId;
-import backend.exception.user.UserErrorCode;
-import backend.exception.user.UserException;
-import backend.infrastructure.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -77,15 +74,14 @@ public class NotificationService implements NotificationUseCase {
         Task currentTask = (Task) event.getParam();
         Task previousTask = currentTask.getPreviousTask();
 
-        return getCurrentUserIdSafely(event)
-                .flatMapMany(senderId -> Flux.fromIterable(currentTask.getManagerIds())
-                        .filter(managerId -> !managerId.equals(senderId))
+        return Flux.fromIterable(currentTask.getManagerIds())
+                        .filter(managerId -> !managerId.equals(currentTask.getLastModifiedBy()))
                         .flatMap(recipientId -> {
                             // 1. 새로운 매니저 배정 알림
                             if (isNewManagerAssigned(currentTask, previousTask, recipientId)) {
                                 return createAndSaveNotification(TaskAssignedNotification.builder()
+                                        .senderId(UserId.of(currentTask.getLastModifiedBy()))
                                         .recipientId(UserId.of(recipientId))
-                                        .senderId(UserId.of(senderId))
                                         .isRead(false)
                                         .eventId(event.getId())
                                         .param(currentTask)
@@ -95,8 +91,8 @@ public class NotificationService implements NotificationUseCase {
                             // 2. 상태 변경 알림
                             if (currentTask.isStatusChanged(previousTask)) {
                                 return createAndSaveNotification(TaskStatusChangedNotification.builder()
+                                        .senderId(UserId.of(currentTask.getLastModifiedBy()))
                                         .recipientId(UserId.of(recipientId))
-                                        .senderId(UserId.of(senderId))
                                         .isRead(false)
                                         .eventId(event.getId())
                                         .param(currentTask)
@@ -107,8 +103,8 @@ public class NotificationService implements NotificationUseCase {
                             String changedFields = currentTask.collectChangedFields(previousTask);
                             if (changedFields != null && !changedFields.trim().isEmpty()) {
                                 return createAndSaveNotification(TaskFieldsChangedNotification.builder()
+                                        .senderId(UserId.of(currentTask.getLastModifiedBy()))
                                         .recipientId(UserId.of(recipientId))
-                                        .senderId(UserId.of(senderId))
                                         .isRead(false)
                                         .eventId(event.getId())
                                         .param(currentTask)
@@ -116,7 +112,7 @@ public class NotificationService implements NotificationUseCase {
                             }
 
                             return Mono.empty();
-                        }))
+                        })
                 .then()
                 .then(createMentionNotifications(event, currentTask, previousTask));
     }
@@ -133,17 +129,16 @@ public class NotificationService implements NotificationUseCase {
             return Mono.empty();
         }
 
-        return getCurrentUserIdSafely(event)
-                .flatMapMany(senderId -> Flux.fromIterable(newMentions)
-                        .filter(userId -> !userId.equals(senderId))
+        return Flux.fromIterable(newMentions)
+                        .filter(userId -> currentTask.getLastModifiedBy() != null && !userId.equals(currentTask.getLastModifiedBy()))
                         .flatMap(recipientId -> createAndSaveNotification(
                                 TaskMentionInDescriptionNotification.builder()
+                                        .senderId(UserId.of(currentTask.getLastModifiedBy()))
                                         .recipientId(UserId.of(recipientId))
-                                        .senderId(UserId.of(senderId))
                                         .isRead(false)
                                         .eventId(event.getId())
                                         .param(currentTask)
-                                        .build())))
+                                        .build()))
                 .then();
     }
 
@@ -162,32 +157,23 @@ public class NotificationService implements NotificationUseCase {
             return Mono.empty();
         }
 
-        return getCurrentUserIdSafely(event)
-                .flatMapMany(senderId ->
-                        taskRepository.findById(comment.getTaskId().getValue())
-                                .flatMapMany(task ->
-                                        Flux.fromIterable(comment.extractMentionedUserIds())
-                                                .filter(userId -> !userId.equals(senderId))
-                                                .flatMap(recipientId -> createAndSaveNotification(
-                                                        CommentMentionNotification.builder()
-                                                                .recipientId(UserId.of(recipientId))
-                                                                .senderId(UserId.of(senderId))
-                                                                .isRead(false)
-                                                                .eventId(event.getId())
-                                                                .param(task)
-                                                                .build()))
+        return taskRepository.findById(comment.getTaskId().getValue())
+                .flatMapMany(task ->
+                        Flux.fromIterable(comment.extractMentionedUserIds())
+                                .filter(mentionedUserId -> !mentionedUserId.equals(comment.getLastModifiedBy()))
+                                .flatMap(recipientId ->
+                                        createAndSaveNotification(
+                                                CommentMentionNotification.builder()
+                                                        .senderId(UserId.of(comment.getLastModifiedBy()) )
+                                                        .recipientId(UserId.of(recipientId))
+                                                        .isRead(false)
+                                                        .eventId(event.getId())
+                                                        .param(task)
+                                                        .build()
+                                        )
                                 )
                 )
                 .then();
-    }
-
-    private <T extends Serializable> Mono<Long> getCurrentUserIdSafely(Event<T> event) {
-        return SecurityUtils.getCurrentUserId()
-                .doOnError(throwable -> {
-                    log.warn("SecurityContext에서 사용자 ID 조회 실패: eventId={}", event.getId(), throwable);
-                    throw new UserException(UserErrorCode.USER_NOT_FOUND);
-                })
-                .onErrorReturn(-1L);
     }
 
     private Mono<Notification> createAndSaveNotification(Notification notification) {
@@ -196,13 +182,8 @@ public class NotificationService implements NotificationUseCase {
                     sseNotificationService.sendNotificationToUser(
                             savedNotification.getRecipientId().getValue(),
                             savedNotification
-                    ).subscribe(
-                            unused -> log.debug("실시간 알림 전송 성공 - 알림 ID: {}", savedNotification.getIdValue()),
-                            error -> log.warn("실시간 알림 전송 실패 - 알림 ID: {}, 에러: {}",
-                                    savedNotification.getIdValue(), error.getMessage())
-                    );
-                })
-                .doOnError(error -> log.error("알림 저장 실패: {}", error.getMessage()));
+                    ).subscribe();
+                });
     }
 
     @Override
