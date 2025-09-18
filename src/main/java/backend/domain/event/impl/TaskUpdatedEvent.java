@@ -1,6 +1,7 @@
 package backend.domain.event.impl;
 
 import backend.domain.event.Event;
+import backend.domain.event.EventTopic;
 import backend.domain.event.EventType;
 import backend.domain.task.model.Task;
 import lombok.Builder;
@@ -11,7 +12,7 @@ public class TaskUpdatedEvent extends Event<Task> {
 
     @Builder
     public TaskUpdatedEvent(Task param) {
-        super(EventType.TASK_UPDATED, param);
+        super(EventType.TASK_UPDATED, param, EventTopic.TASK_TOPIC);
     }
     @Override
     public String getPartitionKey() {

@@ -5,6 +5,6 @@ import reactor.core.publisher.Mono;
 
 import java.io.Serializable;
 
-public interface EventPublishingPort {
+public interface KafkaEventPublishPort {
     <T extends Serializable> Mono<Void> publishEvent(Event<T> event);
 }

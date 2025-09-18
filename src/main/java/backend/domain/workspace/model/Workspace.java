@@ -3,10 +3,12 @@ package backend.domain.workspace.model;
 import backend.domain.common.AggregateRoot;
 import lombok.Builder;
 import lombok.Getter;
+
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Getter
-public class Workspace extends AggregateRoot<WorkspaceId> {
+public class Workspace extends AggregateRoot<WorkspaceId> implements Serializable {
 
     private String workspaceName;
     private String workspaceImgUrl;

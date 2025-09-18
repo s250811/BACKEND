@@ -1,7 +1,7 @@
 package backend.application.service;
 
 import backend.application.port.in.TaskUseCase;
-import backend.application.port.out.event.EventPublishingPort;
+import backend.application.port.out.event.KafkaEventPublishPort;
 import backend.application.port.out.task.TaskManagerRepositoryPort;
 import backend.application.port.out.task.TaskRepositoryPort;
 import backend.application.service.validation.TaskValidationService;
@@ -26,7 +26,7 @@ public class TaskService implements TaskUseCase {
     private final TaskValidationService validationService;
     private final TaskRepositoryPort taskRepository;
     private final TaskManagerRepositoryPort taskManagerRepository;
-    private final EventPublishingPort eventPublisher;
+    private final KafkaEventPublishPort eventPublisher;
 
     @Override
     @Transactional

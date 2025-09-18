@@ -7,6 +7,7 @@ import backend.application.port.out.task.TaskRepositoryPort;
 import backend.application.port.out.user.UserRepositoryPort;
 import backend.application.port.out.workspace.WorkspaceMemberRepositoryPort;
 import backend.application.port.out.workspace.WorkspaceRepositoryPort;
+import backend.application.service.event.workspace.WorkspaceEventService;
 import backend.domain.folder.model.Folder;
 import backend.domain.folder.model.FolderId;
 import backend.domain.project.model.Project;
@@ -45,6 +46,7 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
     private final FolderRepositoryPort folderRepository;
     private final ProjectRepositoryPort projectRepository;
     private final TaskRepositoryPort taskRepository;
+    private final WorkspaceEventService workspaceEventService;
 
     /**
      * Workspace 생성 및 수정 Service layer
@@ -73,19 +75,16 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
     public Mono<Workspace> createNewWorkspace(CreateWorkspaceCommand command, User user) {
         return isOwnerOfWorkspace(user.getId())
                 .flatMap(isOwner -> {
-                    // 이미 워크스페이스 오너인 경우 에러 발생
                     if (isOwner) {
                         return Mono.error(new WorkspaceException(WorkspaceErrorCode.USER_ALREADY_OWNS_WORKSPACE));
                     }
 
-                    // 새 워크스페이스 생성
                     Workspace newWorkspace = Workspace.builder()
                             .workspaceName(command.workspaceName())
                             .workspaceImgUrl(command.workspaceUrl())
                             .description(command.description())
                             .build();
 
-                    // 워크스페이스 저장 및 오너 등록
                     return saveWorkspace(newWorkspace)
                             .flatMap(savedWorkspace -> {
                                 WorkspaceMember ownerMember = WorkspaceMember.builder()
@@ -95,7 +94,9 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                                         .role(WorkspaceMemberRole.OWNER)
                                         .isDeleted(false)
                                         .build();
+
                                 return registerWorkspaceOwner(ownerMember)
+                                        .then(workspaceEventService.publishWorkspaceCreatedEvent(savedWorkspace)) // 이벤트 발행
                                         .thenReturn(savedWorkspace);
                             });
                 });
@@ -119,6 +120,8 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                                     return existingWorkspace;
                                 }))
                                 .flatMap(this::saveWorkspace)
+                                .flatMap(saved -> workspaceEventService.publishWorkspaceUpdatedEvent(saved) // 이벤트 발행
+                                        .thenReturn(saved))
                 );
     }
 
