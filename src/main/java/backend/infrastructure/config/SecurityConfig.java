@@ -38,7 +38,8 @@ public class SecurityConfig {
                                 "/api/v1/auth/magic-link",
                                 "/api/v1/auth/magic-links/verification",
                                 "/api/v1/users",
-                                "/api/v1/users/emails/availability"
+                                "/api/v1/users/emails/availability",
+                                "/ws/workspace/**"
                         ).permitAll()
                         .pathMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**").permitAll()
                         .anyExchange().authenticated()

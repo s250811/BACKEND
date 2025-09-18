@@ -10,5 +10,4 @@ public interface WorkspaceRepositoryPort {
 
     Mono<Workspace> findById(Long id);
 
-    Mono<Void> softDeleteById(Long workspaceId);
 }

@@ -11,6 +11,7 @@ public class SnowflakeIdGenerator {
     private static final long maxSequence = (1L << SEQUENCE_BITS) - 1;
 
     private static final long nodeId = RandomGenerator.getDefault().nextLong(maxNodeId + 1);
+
     // UTC = 2024-01-01T00:00:00Z
     private static final long startTimeMillis = 1704067200000L;
 
