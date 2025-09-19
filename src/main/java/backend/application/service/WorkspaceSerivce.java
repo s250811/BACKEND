@@ -57,6 +57,7 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
      * @return
      */
     @Override
+    @Transactional
     public Mono<Void> createOrUpdateWorkspace(CreateWorkspaceCommand command) {
         if (command.isUpdateMode()) {
             return updateWorkspace(command).then();
@@ -75,7 +76,7 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                 );
     }
 
-    private Mono<Workspace> updateWorkspace(CreateWorkspaceCommand command) {
+    public Mono<Workspace> updateWorkspace(CreateWorkspaceCommand command) {
         return validationService.validateUpdateWorkspace(command)
                 .flatMap(validatedCommand ->
                         workspaceRepository.findById(validatedCommand.workspaceId())
@@ -119,8 +120,8 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                             .role(WorkspaceMemberRole.OWNER)
                             .isDeleted(false)
                             .build();
-                    workspaceMemberRepository.save(owner);
-                    return Mono.just(workspace);
+                    return workspaceMemberRepository.save(owner)
+                            .thenReturn(workspace);
                 });
     }
 

@@ -40,7 +40,6 @@ CREATE TABLE IF NOT EXISTS workspacemember (
                                        id BIGSERIAL PRIMARY KEY,
     workspace_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
-                                       nickname VARCHAR(255) NOT NULL,
     description VARCHAR(500),
                                        role VARCHAR(255) NOT NULL,
                                        CONSTRAINT status_check CHECK (role IN ('OWNER', 'MEMBER')),
