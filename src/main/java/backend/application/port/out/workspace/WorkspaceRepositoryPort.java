@@ -5,7 +5,6 @@ import reactor.core.publisher.Mono;
 
 public interface WorkspaceRepositoryPort {
     Mono<Workspace> save(Workspace workspace);
-
     Mono<Workspace> findById(Long id);
-
+    Mono<Boolean> existsById(Long id);
 }

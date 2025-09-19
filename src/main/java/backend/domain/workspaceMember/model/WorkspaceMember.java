@@ -16,7 +16,6 @@ public class WorkspaceMember extends AggregateRoot<WorkspaceMemberId> {
 
     private WorkspaceId workspaceId;
     private UserId userId;
-    private String nickname;
     private String description;
     private WorkspaceMemberRole role;
     private boolean isDeleted;
@@ -25,12 +24,11 @@ public class WorkspaceMember extends AggregateRoot<WorkspaceMemberId> {
 
     @Builder
     public WorkspaceMember(WorkspaceMemberId id, WorkspaceId workspaceId, UserId userId,
-                           String nickname, String description, WorkspaceMemberRole role,
+                           String description, WorkspaceMemberRole role,
                            boolean isDeleted, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.workspaceId = workspaceId;
         this.userId = userId;
-        this.nickname = nickname;
         this.description = description;
         this.role = role;
         this.isDeleted = isDeleted;

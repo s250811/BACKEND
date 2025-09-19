@@ -26,6 +26,11 @@ public class WorkPersistenceAdapter implements WorkspaceRepositoryPort {
                 .map(WorkPersistenceAdapter::toDomain);
     }
 
+    @Override
+    public Mono<Boolean> existsById(Long id) {
+        return repository.existsById(id);
+    }
+
     private static WorkspaceEntity toEntity(Workspace workspace) {
         return WorkspaceEntity.builder()
                 .id(workspace.getIdValue())

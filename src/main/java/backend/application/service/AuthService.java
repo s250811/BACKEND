@@ -61,8 +61,8 @@ public class AuthService implements AuthUseCase {
                             .switchIfEmpty(Mono.error(new UserException(UserErrorCode.USER_NOT_FOUND)));
                 })
                 .flatMap(user -> {
-                    String newAccessToken = tokenService.generateAccessToken(user.getId().getValue().toString());
-                    String newRefreshToken = tokenService.generateRefreshToken(user.getId().getValue().toString());
+                    String newAccessToken = tokenService.generateAccessToken(user.getIdValue().toString());
+                    String newRefreshToken = tokenService.generateRefreshToken(user.getIdValue().toString());
 
                     return tokenService.storeRefreshToken(user.getId().getValue().toString(), newRefreshToken)
                             .thenReturn(new RefreshResult(newAccessToken, newRefreshToken, refreshTokenExpiration));

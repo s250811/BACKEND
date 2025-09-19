@@ -1,8 +1,6 @@
 package backend.infrastructure.security;
 
 import backend.application.port.out.auth.TokenServicePort;
-import backend.application.port.out.user.UserRepositoryPort;
-import backend.domain.user.model.UserId;
 import backend.exception.user.UserErrorCode;
 import backend.exception.user.UserException;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +18,6 @@ import java.util.Collections;
 public class JwtAuthenticationManager implements ReactiveAuthenticationManager {
 
     private final TokenServicePort tokenService;
-    private final UserRepositoryPort userRepository;
 
     @Override
     public Mono<Authentication> authenticate(Authentication authentication) {
@@ -32,13 +29,10 @@ public class JwtAuthenticationManager implements ReactiveAuthenticationManager {
 
         String userId = tokenService.getUserIdFromToken(token);
 
-        return userRepository.findById(UserId.of(Long.valueOf(userId)))
-                .map(user -> new UsernamePasswordAuthenticationToken(
-                        new AuthenticatedUser(user.getId().getValue().toString(), user.getEmail()),
-                        token,
-                        Collections.singletonList(new SimpleGrantedAuthority("MEMBER"))
-                ));
+        return Mono.just(new UsernamePasswordAuthenticationToken(
+                userId,
+                token,
+                Collections.singletonList(new SimpleGrantedAuthority("MEMBER"))
+        ));
     }
-
-    public record AuthenticatedUser(String userId, String email) {}
 }
