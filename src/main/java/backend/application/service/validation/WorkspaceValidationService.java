@@ -17,8 +17,13 @@ public class WorkspaceValidationService {
 
     public Mono<CreateWorkspaceCommand> validateCreateWorkspace(CreateWorkspaceCommand command) {
         return SecurityUtils.getCurrentUserId()
-                .switchIfEmpty(Mono.error(new UserException(UserErrorCode.USER_NOT_FOUND)))
                 .flatMap(userId -> businessValidator.validateCreateWorkspace(command, userId));
+    }
+
+    public Mono<CreateWorkspaceCommand> validateUpdateWorkspace(CreateWorkspaceCommand command) {
+        return SecurityUtils.getCurrentUserId()
+                .flatMap(userId -> securityValidator.validateWorkspaceOwner(command.workspaceId(), userId))
+                .thenReturn(command);
     }
 
     public Mono<Long> validateGetWorkspace(Long workspaceId) {

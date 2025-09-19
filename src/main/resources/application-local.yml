@@ -1,8 +1,8 @@
 spring:
   r2dbc:
-    url: r2dbc:postgresql://localhost:5432/pmDatabase?sslMode=disable
-    username: root
-    password: password
+    url: r2dbc:postgresql://localhost:5432/postgres?sslMode=disable&timezone=Asia/Seoul
+    username: postgres
+    password: test1234
   data:
     redis:
       host: localhost
@@ -15,5 +15,6 @@ jwt:
 
 logging:
   level:
-    backend: DEBUG
-    org.springframework.r2dbc: DEBUG
+    io.r2dbc.postgresql.client.ParameterBinding: TRACE
+    io.r2dbc.postgresql: DEBUG
+    org.springframework.r2dbc.connection: DEBUG

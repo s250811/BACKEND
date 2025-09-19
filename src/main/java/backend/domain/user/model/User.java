@@ -1,33 +1,24 @@
 package backend.domain.user.model;
 
 import backend.domain.common.AggregateRoot;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
-import software.amazon.awssdk.services.s3.endpoints.internal.Value;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
+@Builder
+@AllArgsConstructor
 public class User extends AggregateRoot<UserId> {
+    private UserId id;
     private String email;
     private String password;
     private String nickname;
     private String profileImageUrl;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-
-    @Builder
-    public User(UserId id, String email, String password, String nickname,
-                String profileImageUrl, LocalDateTime createdAt, LocalDateTime updatedAt) {
-        this.id = id;
-        this.email = email;
-        this.password = password;
-        this.nickname = nickname;
-        this.profileImageUrl = profileImageUrl;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-    }
 
     public static User create(String email, String password, String nickname) {
         return User.builder()
@@ -42,12 +33,8 @@ public class User extends AggregateRoot<UserId> {
     }
 
     public void updateProfile(String nickname, String profileImageUrl) {
-        if (nickname != null) {
-            this.nickname = nickname;
-        }
-        if (profileImageUrl != null) {
-            this.profileImageUrl = profileImageUrl;
-        }
+        this.nickname = nickname != null ? nickname : this.nickname;
+        this.profileImageUrl = profileImageUrl != null ? profileImageUrl : this.profileImageUrl;
         this.updatedAt = LocalDateTime.now();
     }
 

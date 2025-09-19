@@ -29,8 +29,8 @@ public class FolderPersistenceAdapter implements FolderRepositoryPort {
     }
 
     @Override
-    public Flux<Folder> findAllByWorkspaceId(WorkspaceId workspaceId) {
-        return repository.findAllByWorkspaceId(workspaceId.getValue())
+    public Flux<Folder> findAllByWorkspaceId(Long workspaceId) {
+        return repository.findAllByWorkspaceId(workspaceId)
                 .map(FolderPersistenceAdapter::toDomain);
     }
 

@@ -1,10 +1,13 @@
 package backend.infrastructure.adapter.in.web;
 
+import backend.application.port.out.auth.PasswordEncodingPort;
 import backend.infrastructure.adapter.in.common.ApiResponseDto;
 import backend.application.port.in.WorkspaceUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
@@ -18,17 +21,18 @@ public class WorkspaceController {
 
     private final WorkspaceUseCase workspaceUseCase;
 
-    @Operation(summary = "워크스페이스 생성")
+    @Operation(summary = "워크스페이스 생성, 수정")
     @PostMapping
     public Mono<ApiResponseDto<Void>> createWorkspace(@RequestBody CreateWorkspaceRequest request) {
 
         WorkspaceUseCase.CreateWorkspaceCommand command = new WorkspaceUseCase.CreateWorkspaceCommand(
+                request.workspaceId,
                 request.workspaceName(),
                 request.workspaceUrl(),
                 request.description()
         );
 
-        return workspaceUseCase.createWorkspace(command)
+        return workspaceUseCase.createOrUpdateWorkspace(command)
                 .then(Mono.just(ApiResponseDto.createSuccessNoContent(null)));
     }
 
@@ -54,6 +58,7 @@ public class WorkspaceController {
                         "워크스페이스 조회가 완료되었습니다."
                 ));
     }
+
 
     /**
      * 워크스페이스 조회 응답 DTO
@@ -164,6 +169,7 @@ public class WorkspaceController {
 
 
     record CreateWorkspaceRequest(
+            Long workspaceId,
             String workspaceName,
             String workspaceUrl,
             String description

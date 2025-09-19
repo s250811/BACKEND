@@ -3,10 +3,12 @@ package backend.domain.workspace.model;
 import backend.domain.common.AggregateRoot;
 import lombok.Builder;
 import lombok.Getter;
+
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Getter
-public class Workspace extends AggregateRoot<WorkspaceId> {
+public class Workspace extends AggregateRoot<WorkspaceId> implements Serializable {
 
     private String workspaceName;
     private String workspaceImgUrl;
@@ -37,5 +39,20 @@ public class Workspace extends AggregateRoot<WorkspaceId> {
 
     public Long getIdValue() {
         return this.id != null ? this.id.getValue() : null;
+    }
+
+    public void updateWorkspaceName(String workspaceName) {
+            this.workspaceName = workspaceName;
+            this.updatedAt = LocalDateTime.now();
+    }
+
+    public void updateWorkspaceImgUrl(String workspaceImgUrl) {
+            this.workspaceImgUrl = workspaceImgUrl;
+            this.updatedAt = LocalDateTime.now();
+    }
+
+    public void updateDescription(String description) {
+            this.description = description;
+            this.updatedAt = LocalDateTime.now();
     }
 }

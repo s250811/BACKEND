@@ -40,19 +40,19 @@ public class WorkspaceMemberPersistenceAdapter implements WorkspaceMemberReposit
                 .map(WorkspaceMemberPersistenceAdapter::toDomain);
     }
 
+
     @Override
     public Mono<WorkspaceMember> findByWorkspaceIdAndUserId(Long workspaceId, Long userId) {
-        return repository.findAllByWorkspaceId(workspaceId)
-                .filter(entity -> entity.getUserId().equals(userId))
-                .next()
-                .map(WorkspaceMemberPersistenceAdapter::toDomain);
+        return this.findAllByWorkspaceId(workspaceId)
+                .filter(domain -> domain.getUserId().equals(userId))
+                .next();
     }
 
 
     private static WorkspaceMember toDomain(WorkspaceMemberEntity entity) {
         return WorkspaceMember.builder()
                 .id(WorkspaceMemberId.of(entity.getId()))
-                .userId(UserId.of(entity.getUserId()))
+                .userId(entity.getUserId())
                 .nickname(entity.getNickname())
                 .workspaceId(WorkspaceId.of(entity.getWorkspaceId()))
                 .role(entity.getRole())
@@ -65,7 +65,7 @@ public class WorkspaceMemberPersistenceAdapter implements WorkspaceMemberReposit
     private WorkspaceMemberEntity toEntity(WorkspaceMember workspaceMember) {
         return WorkspaceMemberEntity.builder()
                 .id(workspaceMember.getIdValue())
-                .userId(workspaceMember.getUserId().getValue())
+                .userId(workspaceMember.getUserId())
                 .nickname(workspaceMember.getNickname())
                 .workspaceId(workspaceMember.getWorkspaceId().getValue())
                 .role(workspaceMember.getRole())

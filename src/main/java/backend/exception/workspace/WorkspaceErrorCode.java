@@ -14,6 +14,8 @@ public enum WorkspaceErrorCode implements ErrorCode {
     WORKSPACE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "워크스페이스에 대한 접근 권한이 없습니다."),
     WORKSPACE_OWNER_REQUIRED(HttpStatus.FORBIDDEN, "워크스페이스 소유자 권한이 필요합니다."),
     USER_ALREADY_OWNS_WORKSPACE(HttpStatus.CONFLICT, "사용자가 이미 워크스페이스를 소유하고있습니다."),
+    WORKSPACE_CREATE_UPDATE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "워크스페이스 생성/수정 중 오류가 발생했습니다."),
+
 
     // Folder
     FOLDER_NOT_FOUND(HttpStatus.NOT_FOUND, "폴더를 찾을 수 없습니다."),
@@ -22,7 +24,8 @@ public enum WorkspaceErrorCode implements ErrorCode {
     // Project
     PROJECT_NOT_FOUND(HttpStatus.NOT_FOUND, "프로젝트를 찾을 수 없습니다."),
     PROJECT_NOT_IN_FOLDER(HttpStatus.BAD_REQUEST, "프로젝트가 해당 폴더에 속해있지 않습니다."),
-
+    PROJECT_DELETE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "프로젝트 삭제 중 오류가 발생했습니다."),
+    PROJECT_CREATE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "프로젝트 생성 중 오류가 발생했습니다."),
     // Task
     TASK_NOT_FOUND(HttpStatus.NOT_FOUND, "태스크를 찾을 수 없습니다."),
     PARENT_TASK_INVALID(HttpStatus.BAD_REQUEST, "상위 태스크가 같은 프로젝트에 속해있지 않습니다."),
@@ -34,7 +37,10 @@ public enum WorkspaceErrorCode implements ErrorCode {
     USER_ALREADY_WORKSPACE_MEMBER(HttpStatus.CONFLICT, "사용자가 이미 워크스페이스 멤버입니다."),
 
     // Hierarchy Validation
-    PARENT_TASK_DIFFERENT_PROJECT(HttpStatus.UNPROCESSABLE_ENTITY,"부모 태스크와 자식 태스크는 동일한 프로젝트에 속해야 합니다");
+    PARENT_TASK_DIFFERENT_PROJECT(HttpStatus.UNPROCESSABLE_ENTITY,"부모 태스크와 자식 태스크는 동일한 프로젝트에 속해야 합니다"),
+
+    // Event
+    EVENT_TOPIC_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "이벤트 토픽이 정상적이지 않습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

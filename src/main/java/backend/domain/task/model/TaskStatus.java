@@ -18,10 +18,6 @@ public enum TaskStatus {
     private final String displayName;
 
     public static TaskStatus fromString(String statusString) {
-        if (statusString == null || statusString.trim().isEmpty()) {
-            throw new IllegalArgumentException("상태값이 비어있을 수 없습니다.");
-        }
-
         return Stream.of(TaskStatus.values())
                 .filter(status -> status.name().equalsIgnoreCase(statusString))
                 .findFirst()

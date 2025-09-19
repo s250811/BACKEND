@@ -109,13 +109,13 @@ public class UserController {
     ) {}
 
     public record RegisterUserResponse(
-            String userId,
+            Long userId,
             String email,
             String nickname
     ) {}
 
     public record UserProfileResponse(
-            String userId,
+            Long userId,
             String email,
             @NotBlank
             @Pattern(regexp = "^[가-힣a-zA-Z0-9]{1,10}$",
@@ -125,7 +125,7 @@ public class UserController {
     ) {}
 
     public record UpdateProfileResponse(
-            String userId,
+            Long userId,
             String email,
             String nickname,
             String profileImageUrl

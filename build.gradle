@@ -47,6 +47,11 @@ dependencies {
     implementation 'software.amazon.awssdk:s3:2.20.26'
     implementation 'software.amazon.awssdk:netty-nio-client:2.20.26'
 
+    // Kafka
+    implementation 'org.springframework.kafka:spring-kafka'
+    implementation 'org.apache.kafka:kafka-clients:3.8.1'
+
+
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

@@ -8,6 +8,7 @@ import backend.application.port.out.user.UserRepositoryPort;
 import backend.application.port.out.workspace.WorkspaceMemberRepositoryPort;
 import backend.application.port.out.workspace.WorkspaceRepositoryPort;
 import backend.application.service.validation.WorkspaceValidationService;
+import backend.application.service.event.workspace.WorkspaceEventService;
 import backend.domain.folder.model.Folder;
 import backend.domain.folder.model.FolderId;
 import backend.domain.project.model.Project;
@@ -16,15 +17,13 @@ import backend.domain.task.model.Task;
 import backend.domain.user.model.User;
 import backend.domain.user.model.UserId;
 import backend.domain.workspace.model.Workspace;
-import backend.domain.workspace.model.WorkspaceId;
 import backend.domain.workspaceMember.model.WorkspaceMember;
 import backend.domain.workspaceMember.model.WorkspaceMemberRole;
-import backend.exception.user.UserErrorCode;
-import backend.exception.user.UserException;
 import backend.exception.workspace.WorkspaceErrorCode;
 import backend.exception.workspace.WorkspaceException;
 import backend.infrastructure.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
@@ -37,6 +36,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class WorkspaceSerivce implements WorkspaceUseCase {
 
     private final UserRepositoryPort userRepository;
@@ -46,15 +46,57 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
     private final ProjectRepositoryPort projectRepository;
     private final TaskRepositoryPort taskRepository;
     private final WorkspaceValidationService validationService;
+    private final WorkspaceEventService workspaceEventService;
 
+
+    /**
+     * Workspace 생성 및 수정 Service layer
+     * CreateWorkspaceCommand에서 workspaceId 여부를 통해서 Update인지 Craete인지 구분함
+     * 서비스 레이어에서
+     * @param command
+     * @return
+     */
     @Override
-    public Mono<Void> createWorkspace(CreateWorkspaceCommand command) {
+    public Mono<Void> createOrUpdateWorkspace(CreateWorkspaceCommand command) {
+        if (command.isUpdateMode()) {
+            return updateWorkspace(command).then();
+        } else {
+            return createNewWorkspace(command).then();
+        }
+    }
+
+    public Mono<Workspace> createNewWorkspace(CreateWorkspaceCommand command) {
         return validationService.validateCreateWorkspace(command)
-                .flatMap(validatedCommand -> {
-                    return saveWorkspace(validatedCommand)
-                            .flatMap(this::saveWorkspaceMember);
-                })
-                .then();
+                .flatMap(this::saveWorkspace)
+                .flatMap(savedWorkspace ->
+                        saveWorkspaceMember(savedWorkspace)
+                                .then(workspaceEventService.publishWorkspaceCreatedEvent(savedWorkspace))
+                                .thenReturn(savedWorkspace)
+                );
+    }
+
+    private Mono<Workspace> updateWorkspace(CreateWorkspaceCommand command) {
+        return validationService.validateUpdateWorkspace(command)
+                .flatMap(validatedCommand ->
+                        workspaceRepository.findById(validatedCommand.workspaceId())
+                                .switchIfEmpty(Mono.error(new WorkspaceException(WorkspaceErrorCode.WORKSPACE_NOT_FOUND)))
+                                .flatMap(existingWorkspace -> {
+                                    if (validatedCommand.workspaceName() != null && !validatedCommand.workspaceName().isBlank()) {
+                                        existingWorkspace.updateWorkspaceName(validatedCommand.workspaceName());
+                                    }
+                                    if (validatedCommand.workspaceUrl() != null && !validatedCommand.workspaceUrl().isBlank()) {
+                                        existingWorkspace.updateWorkspaceImgUrl(validatedCommand.workspaceUrl());
+                                    }
+                                    if (validatedCommand.description() != null && !validatedCommand.description().isBlank()) {
+                                        existingWorkspace.updateDescription(validatedCommand.description());
+                                    }
+                                    return workspaceRepository.save(existingWorkspace);
+                                })
+                                .flatMap(savedWorkspace ->
+                                        workspaceEventService.publishWorkspaceUpdatedEvent(savedWorkspace)
+                                                .thenReturn(savedWorkspace)
+                                )
+                );
     }
 
     // 워크스페이스 저장
@@ -68,17 +110,17 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
     }
 
     // 워크스페이스 멤버 저장
-    private Mono<WorkspaceMember> saveWorkspaceMember(Workspace workspace) {
+    private Mono<Workspace> saveWorkspaceMember(Workspace workspace) {
         return SecurityUtils.getCurrentUserId()
-                .flatMap(userIdStr -> {
-                    Long userId = Long.valueOf(userIdStr);
+                .flatMap(userId -> {
                     WorkspaceMember owner = WorkspaceMember.builder()
                             .workspaceId(workspace.getId())
                             .userId(UserId.of(userId))
                             .role(WorkspaceMemberRole.OWNER)
                             .isDeleted(false)
                             .build();
-                    return workspaceMemberRepository.save(owner);
+                    workspaceMemberRepository.save(owner);
+                    return Mono.just(workspace);
                 });
     }
 
@@ -106,7 +148,7 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                                     .flatMap(members -> {
                                         // 워크스페이스 멤버 모두 조회
                                         List<Long> userIds = members.stream()
-                                                .map(member -> member.getIdValue())
+                                                .map(WorkspaceMember::getUserIdValue)
                                                 .distinct()
                                                 .collect(Collectors.toList());
 
@@ -115,7 +157,7 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                                                 .map(userMap ->
                                                         members.stream()
                                                                 .map(member -> {
-                                                                    User user = userMap.get(member.getIdValue());
+                                                                    User user = userMap.get(member.getUserIdValue());
                                                                     return new MemberInfo(
                                                                             user.getId().getValue(),
                                                                             user.getNickname(),
@@ -156,12 +198,14 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                             });
     }
 
+
+
     /**
      * N+1 쿼리 문제를 해결하기 위한 계층 구조 조회 메서드
      */
     private Mono<List<WorkspaceUseCase.FolderInfo>> buildHierarchicalStructure(Long workspaceId) {
         // 모든 폴더를 한 번에 조회
-        Mono<List<Folder>> foldersMono = folderRepository.findAllByWorkspaceId(new WorkspaceId(workspaceId))
+        Mono<List<Folder>> foldersMono = folderRepository.findAllByWorkspaceId(workspaceId)
                 .collectList();
 
         // 모든 프로젝트를 한 번에 조회
@@ -239,6 +283,92 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                             })
                             .collect(Collectors.toList());
                 });
+    }
+
+//    /**
+//     * 워크스페이스 삭제
+//     * @param workspaceId
+//     * @return
+//     */
+//    @Override
+//    public Mono<Void> deleteWorkspace(Long workspaceId) {
+//        // 워크스페이스 권한이 있는지 확인하고 권한이 있을 시 소프트 삭제, Trash 생성
+//        return getCurrentUser()
+//                .flatMap(user -> this.isWorkspaceMember(workspaceId, user)
+//                        .flatMap(isMember -> {
+//                            if (!isMember) {
+//                                return Mono.error(new WorkspaceException(WorkspaceErrorCode.WORKSPACE_ACCESS_DENIED));
+//                            }
+//                            return cascadeDeleteWorkspace(workspaceId, user.getIdValue());
+//                        }))
+//                .then();
+//    }
+//
+//    private Mono<Void> cascadeDeleteWorkspace(Long workspaceId, Long userId) {
+//        return null;
+//    }
+//
+//    private Mono<Void> cascadeDeleteFolder(Long folderId, Long userId) {
+//        return folderRepository.findById(folderId)
+//                .flatMap(folder -> {
+//                    // 1. 폴더 하위의 모든 프로젝트 삭제
+//                    return projectRepository.findAllByFolderId(folderId)
+//                            .flatMap(project -> cascadeDeleteProject(project.getId(), userId))
+//                            .then(
+//                                    // 2. 하위 폴더들 재귀적 삭제
+//                                    folderRepository.findByParentFolderId(folderId)
+//                                            .flatMap(subFolder -> cascadeDeleteFolder(subFolder.getId(), userId))
+//                                            .then(
+//                                                    // 3. 현재 폴더 소프트 삭제
+//                                                    folderRepository.softDeleteById(folderId)
+//                                                            .then(
+//                                                                    // 4. 폴더 Trash 생성
+//                                                                    trashRepository.save(
+//                                                                            Trash.createTrash(userId, folderId, TrashType.FOLDER)
+//                                                                    )
+//                                                            )
+//                                            )
+//                            );
+//                })
+//                .then();
+//    }
+//
+//    private Mono<Void> cascadeDeleteProject(Long projectId, Long userId) {
+//        return projectRepository.findById(projectId)
+//                .flatMap(project -> {
+//                    // 1. 프로젝트 하위의 모든 태스크 삭제
+//                    return taskRepository.findByProjectId(projectId)
+//                            .flatMap(task -> softDeleteTask(task.getId(), userId))
+//                            .then(
+//                                    // 2. 프로젝트 소프트 삭제
+//                                    projectRepository.softDeleteById(projectId)
+//                                            .then(
+//                                                    // 3. 프로젝트 Trash 생성
+//                                                    trashRepository.save(
+//                                                            Trash.createTrash(userId, projectId, TrashType.PROJECT)
+//                                                    )
+//                                            )
+//                            );
+//                })
+//                .then();
+//    }
+//
+//    private Mono<Void> softDeleteTask(Long taskId, Long userId) {
+//        return null;
+////        return taskRepository.softDeleteById(taskId)
+////                .then(
+////                        // Task Trash 생성
+////                        trashRepository.save(
+////                                Trash.createTrash(userId, taskId, TrashType.TASK)
+////                        )
+////                )
+////                .then();
+//    }
+
+
+    private Mono<Boolean> isWorkspaceMember(Long workspaceId, User user) {
+        return workspaceMemberRepository.existsByUserIdAndWorkspaceId(user.getId().getValue(), workspaceId)
+                .defaultIfEmpty(false);
     }
 
     /**

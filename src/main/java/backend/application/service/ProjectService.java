@@ -3,7 +3,6 @@ package backend.application.service;
 import backend.application.port.in.ProjectUseCase;
 import backend.application.port.out.folder.FolderRepositoryPort;
 import backend.application.port.out.project.ProjectRepositoryPort;
-import backend.application.port.out.user.UserRepositoryPort;
 import backend.application.port.out.workspace.WorkspaceMemberRepositoryPort;
 import backend.domain.folder.model.Folder;
 import backend.domain.project.model.Project;
