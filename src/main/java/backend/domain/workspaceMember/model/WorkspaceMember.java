@@ -13,10 +13,8 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 public class WorkspaceMember extends AggregateRoot<WorkspaceMemberId> {
-
     private WorkspaceId workspaceId;
-    private Long userId;
-    private String nickname;
+    private UserId userId;
     private String description;
     private WorkspaceMemberRole role;
     private boolean isDeleted;
@@ -24,13 +22,12 @@ public class WorkspaceMember extends AggregateRoot<WorkspaceMemberId> {
     private LocalDateTime updatedAt;
 
     @Builder
-    public WorkspaceMember(WorkspaceMemberId id, WorkspaceId workspaceId, Long userId,
-                           String nickname, String description, WorkspaceMemberRole role,
+    public WorkspaceMember(WorkspaceMemberId id, WorkspaceId workspaceId, UserId userId,
+                           String description, WorkspaceMemberRole role,
                            boolean isDeleted, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.workspaceId = workspaceId;
         this.userId = userId;
-        this.nickname = nickname;
         this.description = description;
         this.role = role;
         this.isDeleted = isDeleted;
@@ -38,7 +35,11 @@ public class WorkspaceMember extends AggregateRoot<WorkspaceMemberId> {
         this.updatedAt = updatedAt;
     }
 
-    public static WorkspaceMember createOwner(Long id, WorkspaceId id1) {
+    public Long getUserIdValue() {
+        return this.userId != null ? this.userId.getValue() : null;
+    }
+
+    public static WorkspaceMember createOwner(UserId id, WorkspaceId id1) {
         return WorkspaceMember.builder()
                 .userId(id)
                 .workspaceId(id1)

@@ -4,6 +4,7 @@ import backend.application.port.out.auth.PasswordEncodingPort;
 import backend.infrastructure.adapter.in.common.ApiResponseDto;
 import backend.application.port.in.WorkspaceUseCase;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -40,7 +41,8 @@ public class WorkspaceController {
     public Mono<ApiResponseDto<Void>> inviteMember(@RequestBody InviteMemberRequest request) {
 
         WorkspaceUseCase.InviteMemberCommand command = new WorkspaceUseCase.InviteMemberCommand(
-                request.workspaceId()
+                request.workspaceId(),
+                request.inviteeId()
         );
 
         return workspaceUseCase.inviteMember(command)
@@ -174,6 +176,7 @@ public class WorkspaceController {
     ){}
 
     record InviteMemberRequest(
-            Long workspaceId
+            @NotNull Long workspaceId,
+            @NotNull Long inviteeId
     ){}
 }

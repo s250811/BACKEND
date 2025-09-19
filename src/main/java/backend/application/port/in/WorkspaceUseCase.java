@@ -36,7 +36,8 @@ public interface WorkspaceUseCase {
      */
 
     record InviteMemberCommand(
-            Long workspaceId
+            Long workspaceId,
+            Long inviteeId
     ){}
 
     /**

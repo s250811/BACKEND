@@ -24,15 +24,14 @@ public class FolderService implements FolderUseCase {
 
     private final WorkspaceRepositoryPort workspaceRepository;
     private final FolderRepositoryPort folderRepository;
-    private final UserRepositoryPort userRepository;
     private final WorkspaceMemberRepositoryPort workspaceMemberRepository;
 
     @Override
     public Mono<Void> createFolder(CreateFolderCommand command) {
-        return getCurrentUser()
-                .flatMap(user -> {
+        return SecurityUtils.getCurrentUserId()
+                .flatMap(userId -> {
                     Mono<Workspace> workspaceMono = getWorkspace(command.workspaceId());
-                    Mono<Boolean> isMemberMono = isWorkspaceMember(command.workspaceId(), user);
+                    Mono<Boolean> isMemberMono = isWorkspaceMember(command.workspaceId(), userId);
 
                     return Mono.zip(workspaceMono, isMemberMono)
                             .flatMap(zip -> {
@@ -57,7 +56,7 @@ public class FolderService implements FolderUseCase {
     @Override
     public Mono<Void> duplicateFolder(DuplicateFolderCommand command) {
 
-        return getCurrentUser()
+        return SecurityUtils.getCurrentUserId()
                 .flatMap(user -> {
                     return getWorkspace(command.workspaceId())
                             .flatMap(workspace -> {
@@ -86,22 +85,13 @@ public class FolderService implements FolderUseCase {
                 .switchIfEmpty(Mono.error(new WorkspaceException(WorkspaceErrorCode.FOLDER_NOT_FOUND)));
     }
 
-    private Mono<Boolean> isWorkspaceMember(Long workspaceId, User user) {
-        return workspaceMemberRepository.existsByUserIdAndWorkspaceId(user.getId().getValue(), workspaceId)
+    private Mono<Boolean> isWorkspaceMember(Long workspaceId, Long userId) {
+        return workspaceMemberRepository.existsByUserIdAndWorkspaceId(userId, workspaceId)
                 .defaultIfEmpty(false);
     }
 
     private Mono<Workspace> getWorkspace(Long workspaceId) {
         return workspaceRepository.findById(workspaceId)
                 .switchIfEmpty(Mono.error(new WorkspaceException(WorkspaceErrorCode.WORKSPACE_NOT_FOUND)));
-    }
-
-    private Mono<User> getCurrentUser() {
-        return SecurityUtils.getCurrentUserId()
-                .flatMap(userId -> {
-                    return userRepository.findById(UserId.of(userId))
-                            .switchIfEmpty(Mono.error(new UserException(UserErrorCode.USER_NOT_FOUND)));
-
-                });
     }
 }

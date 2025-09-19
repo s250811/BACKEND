@@ -86,9 +86,12 @@ public class JwtTokenAdapter implements TokenServicePort {
             return false;
         }
     }
-
     @Override
-    public Claims getClaimsFromToken(String token) {
+    public String getUserIdFromToken(String token) {
+        return getClaimsFromToken(token).getSubject();
+    }
+
+    private Claims getClaimsFromToken(String token) {
         try {
             return getJwtParser()
                     .parseClaimsJws(token)
@@ -97,11 +100,6 @@ public class JwtTokenAdapter implements TokenServicePort {
             log.warn("Failed to parse JWT claims: {}", e.getMessage());
             throw new UserException(UserErrorCode.INVALID_TOKEN);
         }
-    }
-
-    @Override
-    public String getUserIdFromToken(String token) {
-        return getClaimsFromToken(token).getSubject();
     }
 
     private String getRedisKey(String userId) {

@@ -34,15 +34,14 @@ public enum WorkspaceErrorCode implements ErrorCode {
     // Member
     NOT_WORKSPACE_MEMBER(HttpStatus.FORBIDDEN, "워크스페이스 멤버가 아닙니다."),
     WORKSPACE_OWNER_NOT_FOUND(HttpStatus.INTERNAL_SERVER_ERROR, "워크스페이스에 소유자가 존재하지 않습니다."),
-    WORKSPACE_MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "워크스페이스 멤버를 찾을 수 없습니다."),
-
-    // Event
-    EVENT_TOPIC_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "이벤트 토픽이 정상적이지 않습니다."),
+    USER_ALREADY_WORKSPACE_MEMBER(HttpStatus.CONFLICT, "사용자가 이미 워크스페이스 멤버입니다."),
 
     // Hierarchy Validation
     PARENT_TASK_DIFFERENT_PROJECT(HttpStatus.UNPROCESSABLE_ENTITY,"부모 태스크와 자식 태스크는 동일한 프로젝트에 속해야 합니다"),
 
-;
+    // Event
+    EVENT_TOPIC_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "이벤트 토픽이 정상적이지 않습니다.");
+
     private final HttpStatus httpStatus;
     private final String message;
 }
