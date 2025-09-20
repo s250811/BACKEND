@@ -1,5 +1,6 @@
 package backend.infrastructure.config.Workspace;
 
+import backend.application.port.out.auth.TokenServicePort;
 import backend.application.port.out.user.UserRepositoryPort;
 import backend.domain.user.model.UserId;
 import backend.infrastructure.adapter.out.auth.JwtTokenAdapter;
@@ -24,7 +25,7 @@ import java.util.List;
 public class WorkspaceWebSocketHandler implements WebSocketHandler {
 
     private final RealtimeEventBroker eventBroker;
-    private final JwtTokenAdapter jwtTokenAdapter;
+    private final TokenServicePort jwtTokenAdapter;
     private final UserRepositoryPort userRepository;
 
     @Override
