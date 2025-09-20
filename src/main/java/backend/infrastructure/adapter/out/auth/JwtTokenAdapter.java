@@ -104,6 +104,16 @@ public class JwtTokenAdapter implements TokenServicePort {
         return getClaimsFromToken(token).getSubject();
     }
 
+    public Long getUserIdAsLongFromToken(String token) {
+        String userId = getUserIdFromToken(token);
+        try {
+            return Long.parseLong(userId);
+        } catch (NumberFormatException e) {
+            log.warn("User ID in token is not a valid Long: {}", userId);
+            throw new UserException(UserErrorCode.INVALID_TOKEN);
+        }
+    }
+
     private String getRedisKey(String userId) {
         return REDIS_KEY_PREFIX + userId;
     }
