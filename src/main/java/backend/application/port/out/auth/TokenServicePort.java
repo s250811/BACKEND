@@ -10,4 +10,6 @@ public interface TokenServicePort {
     Mono<Void> storeRefreshToken(String userId, String refreshToken);
     Mono<Boolean> validateRefreshToken(String userId, String refreshToken);
     Mono<Void> deleteRefreshToken(String userId);
+
+    Long getUserIdAsLongFromToken(String token);
 }
