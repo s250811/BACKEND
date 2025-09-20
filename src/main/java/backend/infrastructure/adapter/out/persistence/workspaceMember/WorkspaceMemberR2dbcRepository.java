@@ -6,9 +6,7 @@ import reactor.core.publisher.Mono;
 
 public interface WorkspaceMemberR2dbcRepository extends R2dbcRepository<WorkspaceMemberEntity, Long> {
     Mono<WorkspaceMemberEntity> findByUserId(Long ownerId);
-
     Mono<Boolean> existsByUserIdAndWorkspaceId(Long userId, Long workspaceId);
-
     Flux<WorkspaceMemberEntity> findAllByWorkspaceId(Long workspaceId);
-
+    Mono<WorkspaceMemberEntity> findByWorkspaceIdAndUserId(Long workspaceId, Long userId);
 }

@@ -19,7 +19,6 @@ public class TaskSecurityValidator {
 
     public Mono<TaskUseCase.UpdateTaskCommand> validate(TaskUseCase.UpdateTaskCommand command) {
         return SecurityUtils.getCurrentUserId()
-                .switchIfEmpty(Mono.error(new UserException(UserErrorCode.USER_NOT_FOUND)))
                 .flatMap(userId -> validateWorkspaceAccess(userId, command.workspaceId()))
                 .thenReturn(command);
     }

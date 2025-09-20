@@ -7,6 +7,7 @@ import backend.application.port.out.task.TaskRepositoryPort;
 import backend.application.port.out.user.UserRepositoryPort;
 import backend.application.port.out.workspace.WorkspaceMemberRepositoryPort;
 import backend.application.port.out.workspace.WorkspaceRepositoryPort;
+import backend.application.service.validation.WorkspaceValidationService;
 import backend.application.service.event.workspace.WorkspaceEventService;
 import backend.domain.folder.model.Folder;
 import backend.domain.folder.model.FolderId;
@@ -18,8 +19,6 @@ import backend.domain.user.model.UserId;
 import backend.domain.workspace.model.Workspace;
 import backend.domain.workspaceMember.model.WorkspaceMember;
 import backend.domain.workspaceMember.model.WorkspaceMemberRole;
-import backend.exception.user.UserErrorCode;
-import backend.exception.user.UserException;
 import backend.exception.workspace.WorkspaceErrorCode;
 import backend.exception.workspace.WorkspaceException;
 import backend.infrastructure.security.SecurityUtils;
@@ -46,7 +45,9 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
     private final FolderRepositoryPort folderRepository;
     private final ProjectRepositoryPort projectRepository;
     private final TaskRepositoryPort taskRepository;
+    private final WorkspaceValidationService validationService;
     private final WorkspaceEventService workspaceEventService;
+
 
     /**
      * Workspace 생성 및 수정 Service layer
@@ -56,130 +57,72 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
      * @return
      */
     @Override
+    @Transactional
     public Mono<Void> createOrUpdateWorkspace(CreateWorkspaceCommand command) {
-        return getCurrentUser()
-                .flatMap(user -> {
-                    if (command.isUpdateMode()) {
-                        return updateWorkspace(command, user);
-                    } else {
-                        return createNewWorkspace(command, user);
-                    }
-                })
-                .doOnSuccess(workspace -> log.info("워크스페이스 {}완료: id={}, name={}",
-                        command.isUpdateMode() ? "수정 " : "생성 ", workspace.getId(), workspace.getWorkspaceName()))
-                .doOnError(error -> log.error("워크스페이스 {} 실패: {}",
-                        command.isUpdateMode() ? "수정" : "생성", error.getMessage(), error))
-                .then();
+        if (command.isUpdateMode()) {
+            return updateWorkspace(command).then();
+        } else {
+            return createNewWorkspace(command).then();
+        }
     }
 
-    public Mono<Workspace> createNewWorkspace(CreateWorkspaceCommand command, User user) {
-        return isOwnerOfWorkspace(user.getId())
-                .flatMap(isOwner -> {
-                    if (isOwner) {
-                        return Mono.error(new WorkspaceException(WorkspaceErrorCode.USER_ALREADY_OWNS_WORKSPACE));
-                    }
-
-                    Workspace newWorkspace = Workspace.builder()
-                            .workspaceName(command.workspaceName())
-                            .workspaceImgUrl(command.workspaceUrl())
-                            .description(command.description())
-                            .build();
-
-                    return saveWorkspace(newWorkspace)
-                            .flatMap(savedWorkspace -> {
-                                WorkspaceMember ownerMember = WorkspaceMember.builder()
-                                        .workspaceId(savedWorkspace.getId())
-                                        .userId(user.getIdValue())
-                                        .nickname(user.getNickname())
-                                        .role(WorkspaceMemberRole.OWNER)
-                                        .isDeleted(false)
-                                        .build();
-
-                                return registerWorkspaceOwner(ownerMember)
-                                        .then(workspaceEventService.publishWorkspaceCreatedEvent(savedWorkspace)) // 이벤트 발행
-                                        .thenReturn(savedWorkspace);
-                            });
-                });
-    }
-
-    private Mono<Workspace> updateWorkspace(CreateWorkspaceCommand command, User user) {
-        return workspaceRepository.findById(command.workspaceId())
-                .switchIfEmpty(Mono.error(new WorkspaceException(WorkspaceErrorCode.WORKSPACE_NOT_FOUND)))
-                .flatMap(existingWorkspace ->
-                        validateWorkspaceUpdatePermission(existingWorkspace.getIdValue(), user.getIdValue())
-                                .then(Mono.fromCallable(() -> {
-                                    if (command.workspaceName() != null && !command.workspaceName().isBlank()) {
-                                        existingWorkspace.updateWorkspaceName(command.workspaceName());
-                                    }
-                                    if (command.workspaceUrl() != null && !command.workspaceUrl().isBlank()) {
-                                        existingWorkspace.updateWorkspaceImgUrl(command.workspaceUrl());
-                                    }
-                                    if (command.description() != null && !command.description().isBlank()) {
-                                        existingWorkspace.updateDescription(command.description());
-                                    }
-                                    return existingWorkspace;
-                                }))
-                                .flatMap(this::saveWorkspace)
-                                .flatMap(saved -> workspaceEventService.publishWorkspaceUpdatedEvent(saved) // 이벤트 발행
-                                        .thenReturn(saved))
+    public Mono<Workspace> createNewWorkspace(CreateWorkspaceCommand command) {
+        return validationService.validateCreateWorkspace(command)
+                .flatMap(this::saveWorkspace)
+                .flatMap(savedWorkspace ->
+                        saveWorkspaceMember(savedWorkspace)
+                                .then(workspaceEventService.publishWorkspaceCreatedEvent(savedWorkspace))
+                                .thenReturn(savedWorkspace)
                 );
     }
 
-    private Mono<Void> validateWorkspaceUpdatePermission(Long workspaceId, Long userId) {
-
-        return workspaceMemberRepository.findAllByWorkspaceId(workspaceId)
-                .doOnNext(member -> log.debug("멤버: userId={}, role={}", member.getUserId(), member.getRole()))
-                .filter(member -> {
-                    boolean matches = member.getUserId().equals(userId);
-                    return matches;
-                })
-                .next()
-                .switchIfEmpty(
-                        Mono.defer(() -> {
-                            return Mono.error(new WorkspaceException(WorkspaceErrorCode.WORKSPACE_MEMBER_NOT_FOUND));
-                        })
-                )
-                .flatMap(member -> {
-                    if (member.getRole() == WorkspaceMemberRole.OWNER) {
-                        return Mono.empty();
-                    } else {
-                        return Mono.error(new WorkspaceException(WorkspaceErrorCode.WORKSPACE_OWNER_REQUIRED));
-                    }
-                });
-    }
-
-
-    private Mono<WorkspaceMember> registerWorkspaceOwner(WorkspaceMember ownerMember) {
-        return workspaceMemberRepository.save(ownerMember)
-                .doOnSuccess(saved -> log.debug("워크스페이스 오너 등록 완료: workspaceId={}, userId={}",
-                        saved.getWorkspaceId(), saved.getUserId()))
-                .doOnError(error -> log.error("워크스페이스 오너 등록 실패", error));
+    public Mono<Workspace> updateWorkspace(CreateWorkspaceCommand command) {
+        return validationService.validateUpdateWorkspace(command)
+                .flatMap(validatedCommand ->
+                        workspaceRepository.findById(validatedCommand.workspaceId())
+                                .switchIfEmpty(Mono.error(new WorkspaceException(WorkspaceErrorCode.WORKSPACE_NOT_FOUND)))
+                                .flatMap(existingWorkspace -> {
+                                    if (validatedCommand.workspaceName() != null && !validatedCommand.workspaceName().isBlank()) {
+                                        existingWorkspace.updateWorkspaceName(validatedCommand.workspaceName());
+                                    }
+                                    if (validatedCommand.workspaceUrl() != null && !validatedCommand.workspaceUrl().isBlank()) {
+                                        existingWorkspace.updateWorkspaceImgUrl(validatedCommand.workspaceUrl());
+                                    }
+                                    if (validatedCommand.description() != null && !validatedCommand.description().isBlank()) {
+                                        existingWorkspace.updateDescription(validatedCommand.description());
+                                    }
+                                    return workspaceRepository.save(existingWorkspace);
+                                })
+                                .flatMap(savedWorkspace ->
+                                        workspaceEventService.publishWorkspaceUpdatedEvent(savedWorkspace)
+                                                .thenReturn(savedWorkspace)
+                                )
+                );
     }
 
     // 워크스페이스 저장
-    private Mono<Workspace> saveWorkspace(Workspace workspace) {
+    private Mono<Workspace> saveWorkspace(CreateWorkspaceCommand command) {
+        Workspace workspace = Workspace.builder()
+                .workspaceName(command.workspaceName())
+                .workspaceImgUrl(command.workspaceUrl())
+                .description(command.description())
+                .build();
         return workspaceRepository.save(workspace);
     }
 
-    // 유저 조회
-    private Mono<User> getCurrentUser() {
+    // 워크스페이스 멤버 저장
+    private Mono<Workspace> saveWorkspaceMember(Workspace workspace) {
         return SecurityUtils.getCurrentUserId()
                 .flatMap(userId -> {
-                    return userRepository.findById(UserId.of(userId))
-                            .switchIfEmpty(Mono.error(new UserException(UserErrorCode.USER_NOT_FOUND)));
+                    WorkspaceMember owner = WorkspaceMember.builder()
+                            .workspaceId(workspace.getId())
+                            .userId(UserId.of(userId))
+                            .role(WorkspaceMemberRole.OWNER)
+                            .isDeleted(false)
+                            .build();
+                    return workspaceMemberRepository.save(owner)
+                            .thenReturn(workspace);
                 });
-    }
-
-    /**
-     * 워크스페이시를 생성할 때 소유자가 되면 OWNER 권한을 얻음
-     * 워크스페이스를 OWNER로 소유하고 있으면 워크스페이스를 생성할 수 없음
-     * @param userId
-     * @return
-     */
-    private Mono<Boolean> isOwnerOfWorkspace(UserId userId) {
-        return workspaceMemberRepository.findByUserId(userId.getValue())
-                .map(member -> member.getRole() == WorkspaceMemberRole.OWNER)
-                .defaultIfEmpty(false);
     }
 
     /**
@@ -190,37 +133,32 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
     @Override
     @Transactional
     public Mono<GetWorkspaceResult> getWorkspaceById(Long workspaceId) {
-        // 현재 사용자 정보 조회
-        return getCurrentUser()
-                .flatMap(currentUser -> {
-                    Long currentUserId = currentUser.getId().getValue();
+        return validationService.validateGetWorkspace(workspaceId)
+                .flatMap(this::buildWorkspaceResult);
+    }
 
-                    // 워크스페이스 기본 정보 조회
-                    Mono<Workspace> workspaceMono = workspaceRepository.findById(workspaceId)
-                            .switchIfEmpty(Mono.error(new WorkspaceException(WorkspaceErrorCode.WORKSPACE_NOT_FOUND)));
+    private Mono<GetWorkspaceResult> buildWorkspaceResult(Long workspaceId) {
 
-                    // 현재 사용자가 워크스페이스 멤버인지 확인
-                    Mono<WorkspaceMember> membershipMono = workspaceMemberRepository.findByWorkspaceIdAndUserId(workspaceId, currentUserId)
-                            .switchIfEmpty(Mono.error(new WorkspaceException(WorkspaceErrorCode.NOT_WORKSPACE_MEMBER)));
+        // 워크스페이스 기본 정보 조회
+        Mono<Workspace> workspaceMono = workspaceRepository.findById(workspaceId)
+                .switchIfEmpty(Mono.error(new WorkspaceException(WorkspaceErrorCode.WORKSPACE_NOT_FOUND)));
 
-                    // 워크스페이스의 모든 멤버 정보를 한 번에 조회하여 처리
-                    Mono<List<MemberInfo>> membersInfoMono = membershipMono.then(
-                            workspaceMemberRepository.findAllByWorkspaceId(workspaceId)
+        // 워크스페이스의 모든 멤버 정보를 한 번에 조회하여 처리
+        Mono<List<MemberInfo>> membersInfoMono = workspaceMemberRepository.findAllByWorkspaceId(workspaceId)
                                     .collectList()
                                     .flatMap(members -> {
                                         // 워크스페이스 멤버 모두 조회
                                         List<Long> userIds = members.stream()
-                                                .map(WorkspaceMember::getUserId)
+                                                .map(WorkspaceMember::getUserIdValue)
                                                 .distinct()
                                                 .collect(Collectors.toList());
 
                                         return userRepository.findAllById(userIds)
-                                                .collectMap(user -> user.getId().getValue(), Function.identity())
+                                                .collectMap(user -> user.getIdValue(), Function.identity())
                                                 .map(userMap ->
                                                         members.stream()
                                                                 .map(member -> {
-                                                                    User user = userMap.get(member.getUserId());
-
+                                                                    User user = userMap.get(member.getUserIdValue());
                                                                     return new MemberInfo(
                                                                             user.getId().getValue(),
                                                                             user.getNickname(),
@@ -230,11 +168,10 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                                                                 })
                                                                 .collect(Collectors.toList())
                                                 );
-                                    })
-                    );
+                                    });
 
                     // 계층구조로 Workspace 관련 데이터 조회
-                    Mono<List<FolderInfo>> foldersInfoMono = membershipMono.then(buildHierarchicalStructure(workspaceId));
+                    Mono<List<FolderInfo>> foldersInfoMono = buildHierarchicalStructure(workspaceId);
 
                     // 모든 정보를 조합하여 최종 결과 생성
                     return Mono.zip(workspaceMono, membersInfoMono, foldersInfoMono)
@@ -260,7 +197,6 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                                         workspace.getCreatedAt()
                                 );
                             });
-                });
     }
 
 
@@ -268,7 +204,7 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
     /**
      * N+1 쿼리 문제를 해결하기 위한 계층 구조 조회 메서드
      */
-    private Mono<List<FolderInfo>> buildHierarchicalStructure(Long workspaceId) {
+    private Mono<List<WorkspaceUseCase.FolderInfo>> buildHierarchicalStructure(Long workspaceId) {
         // 모든 폴더를 한 번에 조회
         Mono<List<Folder>> foldersMono = folderRepository.findAllByWorkspaceId(workspaceId)
                 .collectList();

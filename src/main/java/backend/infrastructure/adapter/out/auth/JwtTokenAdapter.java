@@ -86,9 +86,12 @@ public class JwtTokenAdapter implements TokenServicePort {
             return false;
         }
     }
-
     @Override
-    public Claims getClaimsFromToken(String token) {
+    public String getUserIdFromToken(String token) {
+        return getClaimsFromToken(token).getSubject();
+    }
+
+    private Claims getClaimsFromToken(String token) {
         try {
             return getJwtParser()
                     .parseClaimsJws(token)
@@ -98,6 +101,7 @@ public class JwtTokenAdapter implements TokenServicePort {
             throw new UserException(UserErrorCode.INVALID_TOKEN);
         }
     }
+
 
     @Override
     public String getUserIdFromToken(String token) {
@@ -114,6 +118,7 @@ public class JwtTokenAdapter implements TokenServicePort {
             throw new UserException(UserErrorCode.INVALID_TOKEN);
         }
     }
+
 
     private String getRedisKey(String userId) {
         return REDIS_KEY_PREFIX + userId;

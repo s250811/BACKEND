@@ -43,11 +43,6 @@ management:
       exposure:
         include: health
 
-jwt:
-  secret: ${JWT_SECRET:myVerySecretKeyThatIsAtLeast256BitsLongForHS256Algorithm}
-  access-token-expiration: ${JWT_ACCESS_EXPIRATION:900000}       # 15분
-  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:2592000000} # 30일
-
 verification:
   code-expiration: ${VERIFICATION_CODE_EXPIRATION:60000}          # 1분 (인증코드 만료기간)
 

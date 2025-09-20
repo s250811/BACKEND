@@ -29,8 +29,6 @@ public class WorkspaceMemberEntity implements Persistable<Long> {
 
     private Long userId;
 
-    private String nickname;
-
     private String description;
 
     private WorkspaceMemberRole role;
