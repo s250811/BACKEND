@@ -104,6 +104,7 @@ public class JwtTokenAdapter implements TokenServicePort {
         return getClaimsFromToken(token).getSubject();
     }
 
+    @Override
     public Long getUserIdAsLongFromToken(String token) {
         String userId = getUserIdFromToken(token);
         try {
