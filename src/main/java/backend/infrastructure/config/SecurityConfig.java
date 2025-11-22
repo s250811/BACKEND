@@ -22,6 +22,8 @@ public class SecurityConfig {
     private final JwtServerAuthenticationConverter jwtServerAuthenticationConverter;
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+        // HTTP 요청의 경우, AuthenticationWebFilter가 authenticate() 성공 시
+        // 내부적으로 SecurityContext를 생성하고 ReactiveSecurityContextHolder에 자동으로 저장
         AuthenticationWebFilter jwtFilter = new AuthenticationWebFilter(jwtAuthenticationManager);
         jwtFilter.setServerAuthenticationConverter(jwtServerAuthenticationConverter);
 

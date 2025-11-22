@@ -1,22 +1,17 @@
 package backend.infrastructure.config.Workspace;
 
 import backend.application.port.out.auth.TokenServicePort;
-import backend.application.port.out.user.UserRepositoryPort;
-import backend.domain.user.model.UserId;
-import backend.infrastructure.adapter.out.auth.JwtTokenAdapter;
 import backend.infrastructure.security.JwtAuthenticationManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.socket.*;
 import reactor.core.publisher.Mono;
 
-import java.util.Collections;
 import java.util.List;
 
 @Component
@@ -26,7 +21,7 @@ public class WorkspaceWebSocketHandler implements WebSocketHandler {
 
     private final RealtimeEventBroker eventBroker;
     private final TokenServicePort jwtTokenAdapter;
-    private final UserRepositoryPort userRepository;
+    private final JwtAuthenticationManager jwtAuthenticationManager;
 
     @Override
     public Mono<Void> handle(WebSocketSession session) {
@@ -40,14 +35,17 @@ public class WorkspaceWebSocketHandler implements WebSocketHandler {
 
         // 1) 토큰 추출 및 기본 검증 (다양한 방법으로 토큰 추출 시도)
         return extractTokenOrClose(session, workspaceId)
-                // 2) 토큰으로 SecurityContext 생성 (DB 조회 포함)
-                .flatMap(token -> buildSecurityContextFromToken(token, session, workspaceId))
-                // 3) 세션 등록 및 메시지 수신을 동일한 SecurityContext로 실행
-                .flatMap(securityContext ->
-                        eventBroker.registerSession(workspaceId, session)
-                                .then(runReceiveChain(session, workspaceId))
-                                .contextWrite(ReactiveSecurityContextHolder.withSecurityContext(Mono.just(securityContext)))
-                )
+                // 2) 토큰으로 Authentication 객체 생성 (WebSocket 핫패스에서는 DB 조회 없이 토큰 검증만 수행 → DB 조회는 느린 I/O이므로 성능상 부적합)
+                .flatMap(token -> jwtAuthenticationManager.authenticate(
+                        new UsernamePasswordAuthenticationToken(null, token)
+                ))// 3) 세션 등록 및 메시지 수신을 동일한 SecurityContext로 실행 (HTTP 요청과 달리 WebSocket은 Spring Security 필터 체인을 거치지 않으므로, SecurityContext를 직접 ReactiveSecurityContextHolder에 설정 필요)
+                .flatMap(auth -> {
+                    return eventBroker.registerSession(workspaceId, session)
+                            .then(runReceiveChain(session, workspaceId))
+                            .contextWrite(ReactiveSecurityContextHolder.withSecurityContext(
+                                    Mono.just(new SecurityContextImpl(auth))
+                            ));
+                })
                 // 4) 인증/등록/처리 중 에러 발생 시 세션 닫음
                 .onErrorResume(err -> {
                     log.warn("WebSocket auth/register error for workspace {}: {}", workspaceId, err.toString());
@@ -84,37 +82,6 @@ public class WorkspaceWebSocketHandler implements WebSocketHandler {
         }
 
         return Mono.just(token);
-    }
-
-    private Mono<SecurityContextImpl> buildSecurityContextFromToken(String token, WebSocketSession session, Long workspaceId) {
-        Long userId;
-        try {
-            userId = jwtTokenAdapter.getUserIdAsLongFromToken(token);
-            log.info("Extracted userId {} from token for workspace {}", userId, workspaceId);
-        } catch (Exception e) {
-            log.warn("Failed to parse userId from token for workspace {}: {}", workspaceId, e.toString());
-            return Mono.error(e);
-        }
-
-        return userRepository.findById(UserId.of(userId))
-                .switchIfEmpty(Mono.defer(() -> {
-                    log.warn("WebSocket auth failed (user not found) for userId {} in workspace {}", userId, workspaceId);
-                    return Mono.error(new RuntimeException("User not found"));
-                }))
-                .map(user -> {
-                    log.info("User {} authenticated successfully for workspace {}", user.getEmail(), workspaceId);
-
-                    JwtAuthenticationManager.AuthenticatedUser principal =
-                            new JwtAuthenticationManager.AuthenticatedUser(user.getIdValue(), user.getEmail());
-
-                    UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                            principal,
-                            token,
-                            Collections.singleton(new SimpleGrantedAuthority("MEMBER"))
-                    );
-
-                    return new SecurityContextImpl(auth);
-                });
     }
 
     private Mono<Void> runReceiveChain(WebSocketSession session, Long workspaceId) {
