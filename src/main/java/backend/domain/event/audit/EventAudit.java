@@ -13,7 +13,6 @@ public class EventAudit extends AggregateRoot<EventAuditId> {
 
     private EventId eventId;
     private EventType eventType;
-    private String consumerTopic;
     private EventProcessingStatus status;
     private String errorMessage;
     private LocalDateTime updatedAt;
@@ -21,13 +20,12 @@ public class EventAudit extends AggregateRoot<EventAuditId> {
 
     @Builder
     public EventAudit(EventAuditId id, EventId eventId, EventType eventType,
-                      String consumerTopic, EventProcessingStatus status,
+                      EventProcessingStatus status,
                       String errorMessage, LocalDateTime updatedAt,
                       LocalDateTime createdAt) {
         this.id = id;
         this.eventId = eventId;
         this.eventType = eventType;
-        this.consumerTopic = consumerTopic;
         this.status = status;
         this.errorMessage = errorMessage;
         this.updatedAt = updatedAt;
@@ -38,11 +36,10 @@ public class EventAudit extends AggregateRoot<EventAuditId> {
         return this.id != null ? this.id.getValue() : null;
     }
 
-    public static EventAudit createStarted(EventId eventId, EventType eventType, String consumerTopic) {
+    public static EventAudit createStarted(EventId eventId, EventType eventType) {
         return EventAudit.builder()
                 .eventId(eventId)
                 .eventType(eventType)
-                .consumerTopic(consumerTopic)
                 .status(EventProcessingStatus.PROCESSING)
                 .build();
     }

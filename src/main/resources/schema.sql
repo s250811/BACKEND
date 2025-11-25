@@ -191,7 +191,6 @@ CREATE TABLE IF NOT EXISTS event_audit (
                                            id BIGSERIAL PRIMARY KEY,
                                            event_id VARCHAR(255) NOT NULL,
     event_type VARCHAR(100) NOT NULL,
-    consumer_topic VARCHAR(100) NOT NULL,
     status VARCHAR(50) NOT NULL,
     CONSTRAINT status_check CHECK (status IN ('PROCESSING', 'SUCCESS', 'FAILED')),
     error_message TEXT,
@@ -202,12 +201,11 @@ CREATE TABLE IF NOT EXISTS event_audit (
 -- EventAudit 인덱스
 CREATE INDEX IF NOT EXISTS idx_event_audit_event_id ON event_audit(event_id);
 CREATE INDEX IF NOT EXISTS idx_event_audit_event_type ON event_audit(event_type);
-CREATE INDEX IF NOT EXISTS idx_event_audit_consumer_topic ON event_audit(consumer_topic);
 CREATE INDEX IF NOT EXISTS idx_event_audit_status ON event_audit(status);
 CREATE INDEX IF NOT EXISTS idx_event_audit_created_at ON event_audit(created_at);
 
 -- 실패한 이벤트 조회를 위한 복합 인덱스
-CREATE INDEX IF NOT EXISTS idx_event_audit_failed_events ON event_audit(status, consumer_topic, created_at)
+CREATE INDEX IF NOT EXISTS idx_event_audit_failed_events ON event_audit(status, created_at)
     WHERE status = 'FAILED';
 
 -- Notification 테이블
