@@ -1,10 +1,11 @@
 package backend.application.service;
 
-import backend.application.port.in.TaskUseCase;
-import backend.application.port.out.event.KafkaEventPublishPort;
+import backend.application.port.in.task.TaskUseCase;
+import backend.application.port.out.messaging.EventProducerPort;
 import backend.application.port.out.task.TaskManagerRepositoryPort;
 import backend.application.port.out.task.TaskRepositoryPort;
 import backend.application.service.validation.TaskValidationService;
+import backend.domain.event.Event;
 import backend.domain.event.impl.TaskUpdatedEvent;
 import backend.domain.task.model.Task;
 import backend.domain.task.model.TaskManager;
@@ -26,14 +27,14 @@ public class TaskService implements TaskUseCase {
     private final TaskValidationService validationService;
     private final TaskRepositoryPort taskRepository;
     private final TaskManagerRepositoryPort taskManagerRepository;
-    private final KafkaEventPublishPort eventPublisher;
+    private final EventProducerPort eventPublisher;
 
     @Override
     @Transactional
     public Mono<Void> updateTask(@Nullable Long taskId, UpdateTaskCommand command) {
         return validationService.validate(command)
                 .then(executeTaskOperation(taskId, command))
-                .flatMap(savedTask -> publishTaskUpdatedEvent(savedTask));
+                .flatMap(this::publishTaskUpdatedEvent);
     }
 
     private Mono<Task> executeTaskOperation(@Nullable Long taskId, UpdateTaskCommand command) {
@@ -64,7 +65,7 @@ public class TaskService implements TaskUseCase {
 
     // TODO: 엔티티 변경 시점부터 아웃박스 테이블인 event_audit에 기록하도록 변경 필요
     private Mono<Void> publishTaskUpdatedEvent(Task savedTask) {
-        TaskUpdatedEvent event = TaskUpdatedEvent.builder()
+        Event event = TaskUpdatedEvent.builder()
                 .param(savedTask)
                 .build();
         return eventPublisher.publishEvent(event);

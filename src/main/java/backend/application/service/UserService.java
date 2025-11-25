@@ -1,7 +1,7 @@
 package backend.application.service;
 
-import backend.application.port.in.UserUseCase;
-import backend.application.port.out.common.FileStoragePort;
+import backend.application.port.in.user.UserUseCase;
+import backend.application.port.out.file.FileStoragePort;
 import backend.application.port.out.auth.PasswordEncodingPort;
 import backend.application.port.out.user.UserRepositoryPort;
 import backend.application.port.out.auth.VerificationCodePort;

@@ -1,6 +1,7 @@
 package backend.application.service;
 
-import backend.application.port.in.WorkspaceUseCase;
+import backend.application.port.in.workspace.WorkspaceUseCase;
+import backend.application.port.out.messaging.EventProducerPort;
 import backend.application.port.out.folder.FolderRepositoryPort;
 import backend.application.port.out.project.ProjectRepositoryPort;
 import backend.application.port.out.task.TaskRepositoryPort;
@@ -8,7 +9,8 @@ import backend.application.port.out.user.UserRepositoryPort;
 import backend.application.port.out.workspace.WorkspaceMemberRepositoryPort;
 import backend.application.port.out.workspace.WorkspaceRepositoryPort;
 import backend.application.service.validation.WorkspaceValidationService;
-import backend.application.service.event.workspace.WorkspaceEventService;
+import backend.domain.event.Event;
+import backend.domain.event.impl.WorkspaceUpdatedEvent;
 import backend.domain.folder.model.Folder;
 import backend.domain.folder.model.FolderId;
 import backend.domain.project.model.Project;
@@ -46,13 +48,11 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
     private final ProjectRepositoryPort projectRepository;
     private final TaskRepositoryPort taskRepository;
     private final WorkspaceValidationService validationService;
-    private final WorkspaceEventService workspaceEventService;
-
+    private final EventProducerPort eventPublisher;
 
     /**
      * Workspace 생성 및 수정 Service layer
      * CreateWorkspaceCommand에서 workspaceId 여부를 통해서 Update인지 Craete인지 구분함
-     * 서비스 레이어에서
      * @param command
      * @return
      */
@@ -60,23 +60,22 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
     @Transactional
     public Mono<Void> createOrUpdateWorkspace(CreateWorkspaceCommand command) {
         if (command.isUpdateMode()) {
-            return updateWorkspace(command).then();
+            return updateWorkspace(command);
         } else {
-            return createNewWorkspace(command).then();
+            return createNewWorkspace(command);
         }
     }
 
-    public Mono<Workspace> createNewWorkspace(CreateWorkspaceCommand command) {
+    public Mono<Void> createNewWorkspace(CreateWorkspaceCommand command) {
         return validationService.validateCreateWorkspace(command)
                 .flatMap(this::saveWorkspace)
                 .flatMap(savedWorkspace ->
                         saveWorkspaceMember(savedWorkspace)
-                                .then(workspaceEventService.publishWorkspaceCreatedEvent(savedWorkspace))
-                                .thenReturn(savedWorkspace)
+                                .then(publishWorkspaceUpdatedEvent(savedWorkspace))
                 );
     }
 
-    public Mono<Workspace> updateWorkspace(CreateWorkspaceCommand command) {
+    public Mono<Void> updateWorkspace(CreateWorkspaceCommand command) {
         return validationService.validateUpdateWorkspace(command)
                 .flatMap(validatedCommand ->
                         workspaceRepository.findById(validatedCommand.workspaceId())
@@ -94,10 +93,15 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                                     return workspaceRepository.save(existingWorkspace);
                                 })
                                 .flatMap(savedWorkspace ->
-                                        workspaceEventService.publishWorkspaceUpdatedEvent(savedWorkspace)
-                                                .thenReturn(savedWorkspace)
-                                )
+                                        publishWorkspaceUpdatedEvent(savedWorkspace))
                 );
+    }
+
+    private Mono<Void> publishWorkspaceUpdatedEvent(Workspace workspace) {
+        Event event = WorkspaceUpdatedEvent.builder()
+                .param(workspace)
+                .build();
+        return eventPublisher.publishEvent(event);
     }
 
     // 워크스페이스 저장

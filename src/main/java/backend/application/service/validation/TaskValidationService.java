@@ -1,6 +1,6 @@
 package backend.application.service.validation;
 
-import backend.application.port.in.TaskUseCase.UpdateTaskCommand;
+import backend.application.port.in.task.TaskUseCase.UpdateTaskCommand;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;

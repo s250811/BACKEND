@@ -1,8 +1,6 @@
 package backend.application.service.validation;
 
-import backend.application.port.in.WorkspaceUseCase.*;
-import backend.exception.user.UserErrorCode;
-import backend.exception.user.UserException;
+import backend.application.port.in.workspace.WorkspaceUseCase.*;
 import backend.infrastructure.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

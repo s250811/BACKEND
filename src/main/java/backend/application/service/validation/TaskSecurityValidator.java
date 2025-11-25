@@ -1,9 +1,7 @@
 package backend.application.service.validation;
 
-import backend.application.port.in.TaskUseCase;
+import backend.application.port.in.task.TaskUseCase;
 import backend.application.port.out.workspace.WorkspaceMemberRepositoryPort;
-import backend.exception.user.UserErrorCode;
-import backend.exception.user.UserException;
 import backend.exception.workspace.WorkspaceErrorCode;
 import backend.exception.workspace.WorkspaceException;
 import backend.infrastructure.security.SecurityUtils;

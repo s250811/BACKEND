@@ -1,11 +1,11 @@
 package backend.application.service;
 
-import backend.application.port.in.AuthUseCase;
+import backend.application.port.in.auth.AuthUseCase;
 import backend.application.port.out.auth.MagicLinkPort;
 import backend.application.port.out.auth.PasswordEncodingPort;
 import backend.application.port.out.auth.TokenServicePort;
 import backend.application.port.out.auth.VerificationCodePort;
-import backend.application.port.out.common.EmailServicePort;
+import backend.application.port.out.email.EmailServicePort;
 import backend.application.port.out.user.*;
 import backend.domain.user.model.*;
 import backend.exception.user.UserErrorCode;

@@ -1,0 +1,143 @@
+package backend.infrastructure.adapter.in.web.socket;
+
+import backend.application.port.in.realtime.RealTimeStreamUseCase;
+import backend.exception.user.UserErrorCode;
+import backend.exception.user.UserException;
+import backend.infrastructure.security.JwtAuthenticationManager;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContextImpl;
+import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.socket.*;
+import reactor.core.publisher.Mono;
+
+import java.util.List;
+
+@Component
+@Slf4j
+@RequiredArgsConstructor
+public class WebSocketHanlder implements WebSocketHandler {
+
+    private final RealTimeStreamUseCase realTimeStreamUseCase;
+    private final JwtAuthenticationManager jwtAuthenticationManager;
+
+    @Override
+    public Mono<Void> handle(WebSocketSession session) {
+        Long workspaceId = extractWorkspaceId(session);
+        if (workspaceId == null) {
+            log.error("Invalid workspace ID in WebSocket URL: {}", session.getHandshakeInfo().getUri());
+            return session.close(CloseStatus.BAD_DATA.withReason("Invalid workspace ID"));
+        }
+
+        log.info("WebSocket connection attempt for workspace: {}", workspaceId);
+
+        // 1) 토큰 추출 및 기본 검증 (다양한 방법으로 토큰 추출 시도)
+        return extractToken(session)
+                .switchIfEmpty(Mono.error(new UserException(UserErrorCode.INVALID_TOKEN)))
+                // 2) 토큰으로 Authentication 객체 생성 (WebSocket 핫패스에서는 DB 조회 없이 토큰 검증만 수행 → DB 조회는 느린 I/O이므로 성능상 부적합)
+                .flatMap(token -> jwtAuthenticationManager.authenticate(
+                        new UsernamePasswordAuthenticationToken(null, token)
+                ))// 3) 세션 등록 및 메시지 수신을 동일한 SecurityContext로 실행 (HTTP 요청과 달리 WebSocket은 Spring Security 필터 체인을 거치지 않으므로, SecurityContext를 직접 ReactiveSecurityContextHolder에 설정 필요)
+                .flatMap(auth -> {
+                    return realTimeStreamUseCase.registerSession(workspaceId, session)
+                            .then(runReceiveChain(session, workspaceId))
+                            .contextWrite(ReactiveSecurityContextHolder.withSecurityContext(
+                                    Mono.just(new SecurityContextImpl(auth))
+                            ));
+                })
+                // 4) 인증/등록/처리 중 에러 발생 시 세션 닫음
+                .onErrorResume(err -> {
+                    log.warn("WebSocket auth/register error for workspace {}: {}", workspaceId, err.toString());
+                    return closeUnauthorized(session);
+                });
+    }
+
+    private Mono<String> extractToken(WebSocketSession session) {
+        HandshakeInfo handshakeInfo = session.getHandshakeInfo();
+
+        // Authorization 헤더에서 토큰 추출
+        String token = extractTokenFromAuthHeader(handshakeInfo.getHeaders());
+
+        return Mono.just(token);
+    }
+
+    private Mono<Void> runReceiveChain(WebSocketSession session, Long workspaceId) {
+        return session.receive()
+                .doOnNext(message -> {
+                    try {
+                        handleIncomingMessage(workspaceId, session, message);
+                    } catch (Exception ex) {
+                        log.error("Error handling incoming message for workspace {}: {}", workspaceId, ex.toString());
+                    }
+                })
+                .doOnError(error -> {
+                    log.error("WebSocket error for workspace {}: {}", workspaceId, error.toString());
+                    realTimeStreamUseCase.unregisterSession(workspaceId, session);
+                })
+                .doOnComplete(() -> {
+                    log.info("WebSocket connection closed for workspace {}", workspaceId);
+                    realTimeStreamUseCase.unregisterSession(workspaceId, session);
+                })
+                .then();
+    }
+
+    private Mono<Void> closeUnauthorized(WebSocketSession session) {
+        return session.close(CloseStatus.NOT_ACCEPTABLE.withReason("Unauthorized"))
+                .onErrorResume(err -> {
+                    log.error("Failed to close WebSocket session after auth failure: {}", err.toString());
+                    return Mono.empty();
+                });
+    }
+
+    // workspaceId 추출 메서드
+    private Long extractWorkspaceId(WebSocketSession session) {
+        try {
+            String path = session.getHandshakeInfo().getUri().getPath();
+            // "/ws/workspace/{workspaceId}" 패턴에서 workspaceId 추출
+            String[] segments = path.split("/");
+            if (segments.length >= 4 && "ws".equals(segments[1]) && "workspace".equals(segments[2])) {
+                return Long.parseLong(segments[3]);
+            }
+        } catch (Exception e) {
+            log.error("Failed to extract workspace ID from WebSocket URL", e);
+        }
+        return null;
+    }
+
+    // Authorization 헤더에서 토큰 추출
+    private String extractTokenFromAuthHeader(HttpHeaders headers) {
+        try {
+            List<String> authHeaders = headers.get(HttpHeaders.AUTHORIZATION);
+            if (authHeaders != null && !authHeaders.isEmpty()) {
+                String authHeader = authHeaders.get(0);
+                if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                    String token = authHeader.substring(7);
+                    return token;
+                }
+            } else {
+                log.debug("No Authorization header found in WebSocket handshake");
+            }
+        } catch (Exception e) {
+            log.warn("Failed to extract token from Authorization header: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    private void handleIncomingMessage(Long workspaceId, WebSocketSession session, WebSocketMessage message) {
+        if (message.getType() == WebSocketMessage.Type.TEXT) {
+            String payload = message.getPayloadAsText();
+            log.debug("Received WebSocket message from workspace {}: {}", workspaceId, payload);
+
+            // 핑/퐁 처리
+            if ("ping".equals(payload.trim())) {
+                session.send(Mono.just(session.textMessage("pong")))
+                        .doOnError(error -> log.error("Failed to send pong response", error))
+                        .subscribe();
+            }
+            // 다른 메시지 처리 로직을 여기에 추가
+        }
+    }
+}

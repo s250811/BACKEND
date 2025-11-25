@@ -1,6 +1,6 @@
 package backend.application.service.validation;
 
-import backend.application.port.in.TaskUseCase;
+import backend.application.port.in.task.TaskUseCase;
 import backend.application.port.out.folder.FolderRepositoryPort;
 import backend.application.port.out.project.ProjectRepositoryPort;
 import backend.application.port.out.task.TaskRepositoryPort;

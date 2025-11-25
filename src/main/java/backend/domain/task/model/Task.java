@@ -1,6 +1,6 @@
 package backend.domain.task.model;
 
-import backend.application.port.in.TaskUseCase;
+import backend.application.port.in.task.TaskUseCase;
 import backend.domain.common.AggregateRoot;
 import backend.domain.common.ChangeDetector;
 import backend.domain.user.model.UserId;
@@ -58,10 +58,6 @@ public class Task extends AggregateRoot<TaskId> implements Serializable {
 
     public String collectChangedFields(Task previous) {
         return ChangeDetector.getChangedFieldsAsString(previous, this, "previousTask", "managerIds", "taskStatus");
-    }
-
-    public boolean hasDescriptionMentions() {
-        return !extractMentionedUserIds().isEmpty();
     }
 
     // parentId가 없을 땐 0으로, 필수값 취급

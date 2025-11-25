@@ -1,16 +1,11 @@
 package backend.application.service;
 
-import backend.application.port.in.FolderUseCase;
+import backend.application.port.in.folder.FolderUseCase;
 import backend.application.port.out.folder.FolderRepositoryPort;
-import backend.application.port.out.user.UserRepositoryPort;
 import backend.application.port.out.workspace.WorkspaceMemberRepositoryPort;
 import backend.application.port.out.workspace.WorkspaceRepositoryPort;
 import backend.domain.folder.model.Folder;
-import backend.domain.user.model.User;
-import backend.domain.user.model.UserId;
 import backend.domain.workspace.model.Workspace;
-import backend.exception.user.UserErrorCode;
-import backend.exception.user.UserException;
 import backend.exception.workspace.WorkspaceErrorCode;
 import backend.exception.workspace.WorkspaceException;
 import backend.infrastructure.security.SecurityUtils;

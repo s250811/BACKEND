@@ -1,6 +1,6 @@
 package backend.application.service.validation;
 
-import backend.application.port.in.WorkspaceUseCase.CreateWorkspaceCommand;
+import backend.application.port.in.workspace.WorkspaceUseCase.CreateWorkspaceCommand;
 import backend.application.port.out.workspace.WorkspaceMemberRepositoryPort;
 import backend.application.port.out.workspace.WorkspaceRepositoryPort;
 import backend.domain.workspaceMember.model.WorkspaceMemberRole;
