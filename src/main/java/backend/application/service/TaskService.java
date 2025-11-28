@@ -8,12 +8,12 @@ import backend.application.port.out.user.UserRepositoryPort;
 import backend.application.service.validation.TaskValidationService;
 import backend.domain.event.Event;
 import backend.domain.event.impl.TaskUpdatedEvent;
+import backend.domain.task.dto.request.UpdateTaskRequest;
+import backend.domain.task.dto.response.TaskDetailResponse;
 import backend.domain.task.model.Task;
 import backend.domain.task.model.TaskManager;
 import backend.exception.task.TaskErrorCode;
 import backend.exception.task.TaskException;
-import backend.exception.workspace.WorkspaceErrorCode;
-import backend.exception.workspace.WorkspaceException;
 import jakarta.annotation.Nullable;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,21 +35,21 @@ public class TaskService implements TaskUseCase {
 
     @Override
     @Transactional
-    public Mono<Void> updateTask(@Nullable Long taskId, UpdateTaskCommand command) {
-        return validationService.validate(command)
-                .then(executeTaskOperation(taskId, command))
+    public Mono<Void> updateTask(@Nullable Long taskId, UpdateTaskRequest request) {
+        return validationService.validate(request)
+                .then(executeTaskOperation(taskId, request))
                 .flatMap(this::publishTaskUpdatedEvent);
     }
 
-    private Mono<Task> executeTaskOperation(@Nullable Long taskId, UpdateTaskCommand command) {
+    private Mono<Task> executeTaskOperation(@Nullable Long taskId, UpdateTaskRequest request) {
         if (taskId == null) {
-            return Mono.just(Task.merge(null, command))
-                    .flatMap(newTask -> updateTaskWithManagers(newTask, command.managerIds()));
+            return Mono.just(Task.merge(null, request))
+                    .flatMap(newTask -> updateTaskWithManagers(newTask, request.managerIds()));
         } else {
             return taskRepository.findById(taskId)
                     .switchIfEmpty(Mono.error(new TaskException(TaskErrorCode.TASK_NOT_FOUND)))
-                    .map(previousTask -> Task.merge(previousTask, command))
-                    .flatMap(mergedTask -> updateTaskWithManagers(mergedTask, command.managerIds()));
+                    .map(previousTask -> Task.merge(previousTask, request))
+                    .flatMap(mergedTask -> updateTaskWithManagers(mergedTask, request.managerIds()));
         }
     }
 
@@ -76,7 +76,7 @@ public class TaskService implements TaskUseCase {
     }
 
     @Override
-    public Mono<TaskDetailResult> getTaskDetail(Long taskId) {
+    public Mono<TaskDetailResponse> getTaskDetail(Long taskId) {
         return taskRepository.findById(taskId)
                 .switchIfEmpty(Mono.error(new TaskException(TaskErrorCode.TASK_NOT_FOUND)))
                 .flatMap(task ->
@@ -85,7 +85,7 @@ public class TaskService implements TaskUseCase {
                                 .collectList()
                                 .flatMap(managerIds -> {
                                     if (managerIds.isEmpty()) {
-                                        return Mono.just(new TaskDetailResult(
+                                        return Mono.just(new TaskDetailResponse(
                                                 task.getIdValue(),
                                                 task.getTaskName(),
                                                 task.getTaskStatus().name(),
@@ -97,13 +97,13 @@ public class TaskService implements TaskUseCase {
                                         ));
                                     }
                                     return userRepository.findAllById(managerIds)
-                                            .map(user -> new TaskManagerResult(
+                                            .map(user -> new TaskDetailResponse.ManagerResponse(
                                                     user.getIdValue(),
                                                     user.getNickname(),
                                                     user.getProfileImageUrl()
                                             ))
                                             .collectList()
-                                            .map(managers -> new TaskDetailResult(
+                                            .map(managers -> new TaskDetailResponse(
                                                     task.getIdValue(),
                                                     task.getTaskName(),
                                                     task.getTaskStatus().name(),

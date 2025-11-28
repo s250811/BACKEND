@@ -1,4 +1,8 @@
 package backend.domain.workspace.dto.request;
 
-public class InviteMemberRequest {
-}
+import jakarta.validation.constraints.NotNull;
+
+public record InviteMemberRequest(
+        @NotNull Long workspaceId,
+        @NotNull Long inviteeId
+){}

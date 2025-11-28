@@ -18,6 +18,9 @@ import backend.domain.project.model.ProjectId;
 import backend.domain.task.model.Task;
 import backend.domain.user.model.User;
 import backend.domain.user.model.UserId;
+import backend.domain.workspace.dto.request.InviteMemberRequest;
+import backend.domain.workspace.dto.request.UpdateWorkspaceRequest;
+import backend.domain.workspace.dto.response.WorkspaceDetailResponse;
 import backend.domain.workspace.model.Workspace;
 import backend.domain.workspaceMember.model.WorkspaceMember;
 import backend.domain.workspaceMember.model.WorkspaceMemberRole;
@@ -53,21 +56,21 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
     /**
      * Workspace 생성 및 수정 Service layer
      * CreateWorkspaceCommand에서 workspaceId 여부를 통해서 Update인지 Craete인지 구분함
-     * @param command
+     * @param request
      * @return
      */
     @Override
     @Transactional
-    public Mono<Void> createOrUpdateWorkspace(CreateWorkspaceCommand command) {
-        if (command.isUpdateMode()) {
-            return updateWorkspace(command);
+    public Mono<Void> createOrUpdateWorkspace(UpdateWorkspaceRequest request) {
+        if (request.isUpdateMode()) {
+            return updateWorkspace(request);
         } else {
-            return createNewWorkspace(command);
+            return createNewWorkspace(request);
         }
     }
 
-    public Mono<Void> createNewWorkspace(CreateWorkspaceCommand command) {
-        return validationService.validateCreateWorkspace(command)
+    public Mono<Void> createNewWorkspace(UpdateWorkspaceRequest request) {
+        return validationService.validateCreateWorkspace(request)
                 .flatMap(this::saveWorkspace)
                 .flatMap(savedWorkspace ->
                         saveWorkspaceMember(savedWorkspace)
@@ -75,8 +78,8 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                 );
     }
 
-    public Mono<Void> updateWorkspace(CreateWorkspaceCommand command) {
-        return validationService.validateUpdateWorkspace(command)
+    public Mono<Void> updateWorkspace(UpdateWorkspaceRequest request) {
+        return validationService.validateUpdateWorkspace(request)
                 .flatMap(validatedCommand ->
                         workspaceRepository.findById(validatedCommand.workspaceId())
                                 .switchIfEmpty(Mono.error(new WorkspaceException(WorkspaceErrorCode.WORKSPACE_NOT_FOUND)))
@@ -105,11 +108,11 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
     }
 
     // 워크스페이스 저장
-    private Mono<Workspace> saveWorkspace(CreateWorkspaceCommand command) {
+    private Mono<Workspace> saveWorkspace(UpdateWorkspaceRequest request) {
         Workspace workspace = Workspace.builder()
-                .workspaceName(command.workspaceName())
-                .workspaceImgUrl(command.workspaceUrl())
-                .description(command.description())
+                .workspaceName(request.workspaceName())
+                .workspaceImgUrl(request.workspaceUrl())
+                .description(request.description())
                 .build();
         return workspaceRepository.save(workspace);
     }
@@ -136,19 +139,19 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
      */
     @Override
     @Transactional
-    public Mono<GetWorkspaceResult> getWorkspaceById(Long workspaceId) {
+    public Mono<WorkspaceDetailResponse> getWorkspaceById(Long workspaceId) {
         return validationService.validateGetWorkspace(workspaceId)
                 .flatMap(this::buildWorkspaceResult);
     }
 
-    private Mono<GetWorkspaceResult> buildWorkspaceResult(Long workspaceId) {
+    private Mono<WorkspaceDetailResponse> buildWorkspaceResult(Long workspaceId) {
 
         // 워크스페이스 기본 정보 조회
         Mono<Workspace> workspaceMono = workspaceRepository.findById(workspaceId)
                 .switchIfEmpty(Mono.error(new WorkspaceException(WorkspaceErrorCode.WORKSPACE_NOT_FOUND)));
 
         // 워크스페이스의 모든 멤버 정보를 한 번에 조회하여 처리
-        Mono<List<MemberInfo>> membersInfoMono = workspaceMemberRepository.findAllByWorkspaceId(workspaceId)
+        Mono<List<WorkspaceDetailResponse.MemberInfo>> membersInfoMono = workspaceMemberRepository.findAllByWorkspaceId(workspaceId)
                                     .collectList()
                                     .flatMap(members -> {
                                         // 워크스페이스 멤버 모두 조회
@@ -163,7 +166,7 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                                                         members.stream()
                                                                 .map(member -> {
                                                                     User user = userMap.get(member.getUserIdValue());
-                                                                    return new MemberInfo(
+                                                                    return new WorkspaceDetailResponse.MemberInfo(
                                                                             user.getId().value(),
                                                                             user.getNickname(),
                                                                             user.getProfileImageUrl(),
@@ -175,22 +178,22 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                                     });
 
                     // 계층구조로 Workspace 관련 데이터 조회
-                    Mono<List<FolderInfo>> foldersInfoMono = buildHierarchicalStructure(workspaceId);
+                    Mono<List<WorkspaceDetailResponse.FolderInfo>> foldersInfoMono = buildHierarchicalStructure(workspaceId);
 
                     // 모든 정보를 조합하여 최종 결과 생성
                     return Mono.zip(workspaceMono, membersInfoMono, foldersInfoMono)
                             .map(tuple -> {
                                 Workspace workspace = tuple.getT1();
-                                List<MemberInfo> members = tuple.getT2();
-                                List<FolderInfo> folders = tuple.getT3();
+                                List<WorkspaceDetailResponse.MemberInfo> members = tuple.getT2();
+                                List<WorkspaceDetailResponse.FolderInfo> folders = tuple.getT3();
 
                                 // 소유자 찾기 (Optional 활용으로 더 안전하게)
-                                MemberInfo owner = members.stream()
+                                WorkspaceDetailResponse.MemberInfo owner = members.stream()
                                         .filter(member -> "OWNER".equals(member.role()))
                                         .findFirst()
                                         .orElseThrow(() -> new WorkspaceException(WorkspaceErrorCode.WORKSPACE_OWNER_NOT_FOUND));
 
-                                return new GetWorkspaceResult(
+                                return new WorkspaceDetailResponse(
                                         workspace.getId().value(),
                                         workspace.getWorkspaceName(),
                                         workspace.getWorkspaceImgUrl(),
@@ -208,7 +211,7 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
     /**
      * N+1 쿼리 문제를 해결하기 위한 계층 구조 조회 메서드
      */
-    private Mono<List<WorkspaceUseCase.FolderInfo>> buildHierarchicalStructure(Long workspaceId) {
+    private Mono<List<WorkspaceDetailResponse.FolderInfo>> buildHierarchicalStructure(Long workspaceId) {
         // 모든 폴더를 한 번에 조회
         Mono<List<Folder>> foldersMono = folderRepository.findAllByWorkspaceId(workspaceId)
                 .collectList();
@@ -257,14 +260,14 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
 
                     return folders.stream()
                             .map(folder -> {
-                                List<ProjectInfo> projectInfos = projectsByFolder
+                                List<WorkspaceDetailResponse.ProjectInfo> projectInfos = projectsByFolder
                                         .getOrDefault(folder.getId().value(), Collections.emptyList())
                                         .stream()
                                         .map(project -> {
-                                            List<TaskInfo> taskInfos = tasksByProject
+                                            List<WorkspaceDetailResponse.TaskInfo> taskInfos = tasksByProject
                                                     .getOrDefault(project.getId().value(), Collections.emptyList())
                                                     .stream()
-                                                    .map(task -> new TaskInfo(
+                                                    .map(task -> new WorkspaceDetailResponse.TaskInfo(
                                                             task.getId().value(),
                                                             task.getParentId() != null ? task.getParentId() : null,
                                                             task.getTaskName(),
@@ -272,7 +275,7 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                                                     ))
                                                     .collect(Collectors.toList());
 
-                                            return new ProjectInfo(
+                                            return new WorkspaceDetailResponse.ProjectInfo(
                                                     project.getId().value(),
                                                     project.getProjectName(),
                                                     taskInfos
@@ -280,7 +283,7 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                                         })
                                         .collect(Collectors.toList());
 
-                                return new FolderInfo(
+                                return new WorkspaceDetailResponse.FolderInfo(
                                         folder.getId().value(),
                                         folder.getFolderName(),
                                         projectInfos
@@ -382,7 +385,7 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
      * @return
      */
     @Override
-    public Mono<Void> inviteMember(InviteMemberCommand command) {
+    public Mono<Void> inviteMember(InviteMemberRequest command) {
 
         return Mono.empty();
     }

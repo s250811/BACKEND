@@ -1,6 +1,7 @@
 package backend.application.service.validation;
 
 import backend.application.port.in.workspace.WorkspaceUseCase.*;
+import backend.domain.workspace.dto.request.UpdateWorkspaceRequest;
 import backend.infrastructure.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -13,15 +14,15 @@ public class WorkspaceValidationService {
     private final WorkspaceSecurityValidator securityValidator;
     private final WorkspaceBusinessValidator businessValidator;
 
-    public Mono<CreateWorkspaceCommand> validateCreateWorkspace(CreateWorkspaceCommand command) {
+    public Mono<UpdateWorkspaceRequest> validateCreateWorkspace(UpdateWorkspaceRequest request) {
         return SecurityUtils.getCurrentUserId()
-                .flatMap(userId -> businessValidator.validateCreateWorkspace(command, userId));
+                .flatMap(userId -> businessValidator.validateCreateWorkspace(request, userId));
     }
 
-    public Mono<CreateWorkspaceCommand> validateUpdateWorkspace(CreateWorkspaceCommand command) {
+    public Mono<UpdateWorkspaceRequest> validateUpdateWorkspace(UpdateWorkspaceRequest request) {
         return SecurityUtils.getCurrentUserId()
-                .flatMap(userId -> securityValidator.validateWorkspaceOwner(command.workspaceId(), userId))
-                .thenReturn(command);
+                .flatMap(userId -> securityValidator.validateWorkspaceOwner(request.workspaceId(), userId))
+                .thenReturn(request);
     }
 
     public Mono<Long> validateGetWorkspace(Long workspaceId) {

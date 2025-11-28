@@ -1,4 +1,8 @@
 package backend.domain.user.dto.response;
 
-public class RefreshResponse {
-}
+public record RefreshResponse(
+        String accessToken,
+        String refreshToken,
+        long refreshTokenExpiration
+) {}
+

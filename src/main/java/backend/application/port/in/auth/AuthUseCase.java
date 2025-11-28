@@ -1,29 +1,16 @@
 package backend.application.port.in.auth;
 
+import backend.domain.user.dto.requst.LoginRequest;
+import backend.domain.user.dto.response.LoginResponse;
+import backend.domain.user.dto.response.RefreshResponse;
 import reactor.core.publisher.Mono;
+import reactor.util.function.Tuple3;
 
 public interface AuthUseCase {
-
-    record LoginCommand(String email, String password, boolean rememberMe) {}
-    record LoginResult(
-            String accessToken,
-            String refreshToken,
-            long refreshTokenExpiration,
-            String userId,
-            String email,
-            String nickname
-    ) {}
-    record RefreshCommand(String refreshToken) {}
-    record RefreshResult(String accessToken, String refreshToken, long refreshTokenExpiration) {}
-    record LogoutCommand(String refreshToken) {}
-    record SendMagicLinkCommand(String email) {}
-    record VerifyMagicLinkCommand(String token) {}
-    record SendVerificationCodeCommand(String email){}
-
-    Mono<LoginResult> login(LoginCommand command);
-    Mono<RefreshResult> refresh(RefreshCommand command);
-    Mono<Void> logout(LogoutCommand command);
-    Mono<Void> sendMagicLink(SendMagicLinkCommand command);
-    Mono<LoginResult> verifyMagicLink(VerifyMagicLinkCommand command);
-    Mono<Void> sendVerificationCode(SendVerificationCodeCommand command);
+    Mono<Tuple3<LoginResponse,String, Long>> login(LoginRequest command);
+    Mono<RefreshResponse> refresh(String refreshToken);
+    Mono<Void> logout(String refreshToken);
+    Mono<Void> sendMagicLink(String email);
+    Mono<Tuple3<LoginResponse,String, Long>> verifyMagicLink(String magicLinkToken);
+    Mono<Void> sendVerificationCode(String email);
 }

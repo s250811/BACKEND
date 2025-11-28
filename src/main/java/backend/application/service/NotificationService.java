@@ -10,6 +10,7 @@ import backend.domain.event.Event;
 import backend.domain.event.audit.EventAudit;
 import backend.domain.event.impl.CommentUpdatedEvent;
 import backend.domain.event.impl.TaskUpdatedEvent;
+import backend.domain.notification.dto.response.NotificationDetailResponse;
 import backend.domain.notification.model.Notification;
 import backend.domain.notification.model.impl.*;
 import backend.domain.task.model.Task;
@@ -180,8 +181,18 @@ public class NotificationService implements NotificationUseCase {
                 });
     }
     @Override
-    public Mono<Flux<Notification>> getNotificationsByRecipientId(Long recipientId, int page, int size) {
-        return Mono.just(notificationRepository.findByRecipientIdOrderByCreatedAtDesc(recipientId, page, size));
+    public Flux<NotificationDetailResponse> getNotificationsByRecipientId(Long recipientId, int page, int size) {
+        return notificationRepository.findByRecipientIdOrderByCreatedAtDesc(recipientId, page, size)
+                .map(entity -> new NotificationDetailResponse(
+                        entity.getIdValue(),
+                        entity.getSenderId().value(),
+                        entity.getRecipientId().value(),
+                        entity.getIsRead(),
+                        entity.getType(),
+                        entity.getCreatedAt(),
+                        entity.getReadAt(),
+                        entity.getMessage()
+                ));
     }
 
     @Override

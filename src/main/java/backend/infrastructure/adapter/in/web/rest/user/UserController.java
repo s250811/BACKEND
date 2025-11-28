@@ -1,17 +1,19 @@
 package backend.infrastructure.adapter.in.web.rest.user;
 
 import backend.application.port.in.user.UserUseCase;
+import backend.domain.user.dto.requst.RegisterUserRequest;
+import backend.domain.user.dto.response.RegisterUserResponse;
+import backend.domain.user.dto.response.UserProfileDetailResponse;
+import backend.infrastructure.adapter.in.web.rest.dto.ApiResponseDto;
 import backend.infrastructure.security.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
 /**
@@ -26,107 +28,44 @@ public class UserController {
 
     @GetMapping("/emails/availability")
     @Operation(summary = "이메일 중복 검사")
-    public Mono<Void> checkEmailDuplicate(@RequestParam @Email @NotBlank String email) {
-        return userUseCase.checkEmailDuplicate(new UserUseCase.CheckEmailDuplicateCommand(email))
-                .then();
+    public Mono<ApiResponseDto<Void>> checkEmailDuplicate(@RequestParam @Email String email) {
+        return userUseCase.checkEmailDuplicate(email)
+                .then(Mono.just(ApiResponseDto.createSuccessNoContent("이메일 사용 가능합니다.")));
     }
 
     @Operation(summary = "회원가입")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Mono<RegisterUserResponse> register(@Valid @RequestBody RegisterUserRequest request) {
-        System.out.println("Received registration request: " + request);
-
-        UserUseCase.RegisterUserCommand command =
-                new UserUseCase.RegisterUserCommand(
-                        request.email(),
-                        request.password(),
-                        request.nickname()
-                );
-
-        return userUseCase.register(command, request.code())
+    public Mono<ApiResponseDto<RegisterUserResponse>> register(@Valid @RequestBody RegisterUserRequest request) {
+        return userUseCase.register(request)
                 .map(result -> new RegisterUserResponse(
                         result.userId(),
                         result.email(),
                         result.nickname()
-                ));
+                ))
+                .map(response -> ApiResponseDto.createSuccess(response, "회원가입이 완료되었습니다."));
     }
 
     @Operation(summary = "프로필 조회")
     @GetMapping("/me")
-    public Mono<ResponseEntity<UserProfileResponse>> getProfile() {
+    public Mono<ApiResponseDto<UserProfileDetailResponse>> getProfile() {
         return SecurityUtils.getCurrentUserId()
                 .flatMap(userUseCase::getUserProfile)
-                .map(result -> ResponseEntity.ok(new UserProfileResponse(
-                        result.userId(),
-                        result.email(),
-                        result.nickname(),
-                        result.profileImageUrl()
-                )))
-                .onErrorReturn(ResponseEntity.badRequest().build());
+                .map(result -> ApiResponseDto.createSuccess(result, "프로필 조회 완료"))
+                .onErrorReturn(ApiResponseDto.createError("프로필 조회 실패"));
     }
 
     @Operation(summary = "프로필 수정")
     @PatchMapping("/me")
-    public Mono<ResponseEntity<UpdateProfileResponse>> updateProfile(
+    public Mono<ApiResponseDto<UserProfileDetailResponse>> updateProfile(
             @Pattern(regexp = "^[가-힣a-zA-Z0-9]{1,10}$",
                     message = "닉네임은 1-10자의 한글, 영문, 숫자만 허용됩니다.")
             @RequestPart(value = "nickname", required = false) String nickname,
             @RequestPart(value = "file", required = false) FilePart file) {
 
         return SecurityUtils.getCurrentUserId()
-                .flatMap(userId -> {
-                    var command = new UserUseCase.UpdateProfileCommand(
-                            userId,
-                            nickname,
-                            file
-                    );
-                    return userUseCase.updateProfile(command);
-                })
-                .map(result -> ResponseEntity.ok(new UpdateProfileResponse(
-                        result.userId(),
-                        result.email(),
-                        result.nickname(),
-                        result.profileImageUrl()
-                )))
-                .onErrorReturn(ResponseEntity.badRequest().build());
+                .flatMap(userId -> userUseCase.updateProfile(userId, nickname, file))
+                .map(result -> ApiResponseDto.createSuccess(result, "프로필 수정 완료"))
+                .onErrorReturn(ApiResponseDto.createError("프로필 수정 실패"));
     }
-
-
-    public record RegisterUserRequest(
-            @NotBlank @Email String email,
-            @NotBlank
-            @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{6,20}$",
-                    message = "비밀번호는 6-20자이며, 대소문자와 숫자를 포함해야 합니다.")
-            String password,
-            @Pattern(regexp = "^[가-힣a-zA-Z0-9]{1,10}$",
-                    message = "닉네임은 비어있거나 1-10자의 한글, 영문, 숫자여야 합니다.")
-            String nickname,
-            @NotBlank
-            @Pattern(regexp = "^\\d{6}$", message = "인증코드는 6자리 숫자여야 합니다.")
-            String code
-    ) {}
-
-    public record RegisterUserResponse(
-            Long userId,
-            String email,
-            String nickname
-    ) {}
-
-    public record UserProfileResponse(
-            Long userId,
-            String email,
-            @NotBlank
-            @Pattern(regexp = "^[가-힣a-zA-Z0-9]{1,10}$",
-                    message = "닉네임은 1-10자의 한글, 영문, 숫자만 허용됩니다.")
-            String nickname,
-            String profileImageUrl
-    ) {}
-
-    public record UpdateProfileResponse(
-            Long userId,
-            String email,
-            String nickname,
-            String profileImageUrl
-    ) {}
 }
