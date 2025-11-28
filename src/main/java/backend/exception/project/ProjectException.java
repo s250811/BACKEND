@@ -1,14 +1,14 @@
-package backend.exception.workspace;
+package backend.exception.project;
 
 import backend.exception.ErrorCode;
 import backend.exception.ErrorCodeHolder;
 import lombok.Getter;
 
 @Getter
-public class WorkspaceException extends RuntimeException implements ErrorCodeHolder {
+public class ProjectException extends RuntimeException implements ErrorCodeHolder {
     private final ErrorCode errorCode;
 
-    public WorkspaceException(ErrorCode errorCode) {
+    public ProjectException(ErrorCode errorCode) {
         super(errorCode.getMessage());
         this.errorCode = errorCode;
     }

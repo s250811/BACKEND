@@ -6,6 +6,8 @@ import backend.application.port.out.workspace.WorkspaceMemberRepositoryPort;
 import backend.application.port.out.workspace.WorkspaceRepositoryPort;
 import backend.domain.folder.model.Folder;
 import backend.domain.workspace.model.Workspace;
+import backend.exception.folder.FolderErrorCode;
+import backend.exception.folder.FolderException;
 import backend.exception.workspace.WorkspaceErrorCode;
 import backend.exception.workspace.WorkspaceException;
 import backend.infrastructure.security.SecurityUtils;
@@ -77,7 +79,7 @@ public class FolderService implements FolderUseCase {
 
     private Mono<Folder> getFolderMono(DuplicateFolderCommand command) {
         return folderRepository.findById(command.folderId())
-                .switchIfEmpty(Mono.error(new WorkspaceException(WorkspaceErrorCode.FOLDER_NOT_FOUND)));
+                .switchIfEmpty(Mono.error(new FolderException(FolderErrorCode.FOLDER_NOT_FOUND)));
     }
 
     private Mono<Boolean> isWorkspaceMember(Long workspaceId, Long userId) {
