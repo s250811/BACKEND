@@ -46,11 +46,12 @@ public class NotificationPersistenceAdapter implements NotificationRepositoryPor
     private NotificationEntity toEntity(Notification notification) {
         return NotificationEntity.builder()
                 .id(notification.getIdValue())
-                .recipientId(notification.getRecipientId().getValue())
-                .senderId(notification.getSenderId().getValue())
+                .recipientId(notification.getRecipientId().value())
+                .senderId(notification.getSenderId().value())
                 .isRead(notification.getIsRead())
-                .eventId(notification.getEventId().getValue())
+                .eventId(notification.getEventId().value())
                 .type(notification.getType())
+                .createdAt(notification.getCreatedAt())
                 .readAt(notification.getReadAt())
                 .message(notification.getMessage())
                 .build();
