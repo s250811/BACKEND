@@ -32,7 +32,7 @@ public class ProjectService implements ProjectUseCase {
                                         .flatMap(isMember -> {
 
                                             var project = Project.builder()
-                                                    .folderId(folder.getId().getValue())
+                                                    .folderId(folder.getId().value())
                                                     .projectName(command.projectName())
                                                     .description(command.description())
                                                     .build();

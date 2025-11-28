@@ -71,7 +71,7 @@ public class UserService implements UserUseCase {
 
     private RegisterUserResult toRegisterResult(User user) {
         return new UserUseCase.RegisterUserResult(
-                user.getId().getValue(),
+                user.getId().value(),
                 user.getEmail(),
                 user.getNickname()
         );
@@ -83,7 +83,7 @@ public class UserService implements UserUseCase {
         return userRepository.findById(UserId.of(userId))
                 .switchIfEmpty(Mono.error(new UserException(UserErrorCode.USER_NOT_FOUND)))
                 .map(user -> new UserProfileResult(
-                        user.getId().getValue(),
+                        user.getId().value(),
                         user.getEmail(),
                         user.getNickname(),
                         user.getProfileImageUrl()
@@ -114,7 +114,7 @@ public class UserService implements UserUseCase {
                     });
                 })
                 .map(user -> new UpdateProfileResult(
-                        user.getId().getValue(),
+                        user.getId().value(),
                         user.getEmail(),
                         user.getNickname(),
                         user.getProfileImageUrl()

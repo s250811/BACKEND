@@ -164,7 +164,7 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                                                                 .map(member -> {
                                                                     User user = userMap.get(member.getUserIdValue());
                                                                     return new MemberInfo(
-                                                                            user.getId().getValue(),
+                                                                            user.getId().value(),
                                                                             user.getNickname(),
                                                                             user.getProfileImageUrl(),
                                                                             member.getRole().name()
@@ -191,7 +191,7 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                                         .orElseThrow(() -> new WorkspaceException(WorkspaceErrorCode.WORKSPACE_OWNER_NOT_FOUND));
 
                                 return new GetWorkspaceResult(
-                                        workspace.getId().getValue(),
+                                        workspace.getId().value(),
                                         workspace.getWorkspaceName(),
                                         workspace.getWorkspaceImgUrl(),
                                         workspace.getDescription(),
@@ -258,14 +258,14 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                     return folders.stream()
                             .map(folder -> {
                                 List<ProjectInfo> projectInfos = projectsByFolder
-                                        .getOrDefault(folder.getId().getValue(), Collections.emptyList())
+                                        .getOrDefault(folder.getId().value(), Collections.emptyList())
                                         .stream()
                                         .map(project -> {
                                             List<TaskInfo> taskInfos = tasksByProject
-                                                    .getOrDefault(project.getId().getValue(), Collections.emptyList())
+                                                    .getOrDefault(project.getId().value(), Collections.emptyList())
                                                     .stream()
                                                     .map(task -> new TaskInfo(
-                                                            task.getId().getValue(),
+                                                            task.getId().value(),
                                                             task.getParentId() != null ? task.getParentId() : null,
                                                             task.getTaskName(),
                                                             task.getTaskStatus().name()
@@ -273,7 +273,7 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                                                     .collect(Collectors.toList());
 
                                             return new ProjectInfo(
-                                                    project.getId().getValue(),
+                                                    project.getId().value(),
                                                     project.getProjectName(),
                                                     taskInfos
                                             );
@@ -281,7 +281,7 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                                         .collect(Collectors.toList());
 
                                 return new FolderInfo(
-                                        folder.getId().getValue(),
+                                        folder.getId().value(),
                                         folder.getFolderName(),
                                         projectInfos
                                 );
@@ -372,7 +372,7 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
 
 
     private Mono<Boolean> isWorkspaceMember(Long workspaceId, User user) {
-        return workspaceMemberRepository.existsByUserIdAndWorkspaceId(user.getId().getValue(), workspaceId)
+        return workspaceMemberRepository.existsByUserIdAndWorkspaceId(user.getId().value(), workspaceId)
                 .defaultIfEmpty(false);
     }
 

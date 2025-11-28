@@ -35,10 +35,8 @@ public class Task extends AggregateRoot<TaskId> implements Serializable {
     private Task previousTask;
 
     public Long getIdValue() {
-        return this.id != null ? this.id.getValue() : null;
+        return this.id != null ? this.id.value() : null;
     }
-
-    public Long getLastModifiedBy() { return this.lastModifiedBy != null ? this.lastModifiedBy.getValue() : null;}
 
     public List<Long> extractMentionedUserIds() {
         if (description == null || description.isEmpty()) {

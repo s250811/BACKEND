@@ -31,10 +31,10 @@ public class RealTimeService implements RealTimeUseCase {
         EventType eventType = event.getType();
 
         // 1) 멱등성 체크 + audit 확보
-        return eventAuditRepository.findById(eventId.getValue())
+        return eventAuditRepository.findById(eventId.value())
                 .flatMap(existing -> {
                     if (existing.getStatus() == EventProcessingStatus.SUCCESS) {
-                        log.info("Event {} already processed successfully. Skipping.", eventId.getValue());
+                        log.info("Event {} already processed successfully. Skipping.", eventId.value());
                         return Mono.<EventAudit>empty();
                     }
                     return Mono.just(existing);
@@ -64,7 +64,7 @@ public class RealTimeService implements RealTimeUseCase {
 
     private Map<String, Object> createWebSocketPayload(Event<?> event, Long workspaceId) {
         Map<String, Object> wsPayload = new HashMap<>();
-        wsPayload.put("eventId", String.valueOf(event.getId().getValue()));
+        wsPayload.put("eventId", String.valueOf(event.getId().value()));
         wsPayload.put("type", event.getType().name());
         wsPayload.put("workspaceId", workspaceId);
         wsPayload.put("payload", event.getParam());

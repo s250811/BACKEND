@@ -36,7 +36,7 @@ public class WorkspaceMember extends AggregateRoot<WorkspaceMemberId> {
     }
 
     public Long getUserIdValue() {
-        return this.userId != null ? this.userId.getValue() : null;
+        return this.userId != null ? this.userId.value() : null;
     }
 
     public static WorkspaceMember createOwner(UserId id, WorkspaceId id1) {
@@ -49,7 +49,7 @@ public class WorkspaceMember extends AggregateRoot<WorkspaceMemberId> {
     }
 
     public Long getIdValue() {
-        return this.id != null ? this.id.getValue() : null;
+        return this.id != null ? this.id.value() : null;
     }
 
 }

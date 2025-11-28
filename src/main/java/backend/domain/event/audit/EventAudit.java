@@ -33,7 +33,7 @@ public class EventAudit extends AggregateRoot<EventAuditId> {
     }
 
     public Long getIdValue() {
-        return this.id != null ? this.id.getValue() : null;
+        return this.id != null ? this.id.value() : null;
     }
 
     public static EventAudit createStarted(EventId eventId, EventType eventType) {

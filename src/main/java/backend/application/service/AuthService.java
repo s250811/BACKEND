@@ -64,7 +64,7 @@ public class AuthService implements AuthUseCase {
                     String newAccessToken = tokenService.generateAccessToken(user.getIdValue().toString());
                     String newRefreshToken = tokenService.generateRefreshToken(user.getIdValue().toString());
 
-                    return tokenService.storeRefreshToken(user.getId().getValue().toString(), newRefreshToken)
+                    return tokenService.storeRefreshToken(user.getId().value().toString(), newRefreshToken)
                             .thenReturn(new RefreshResult(newAccessToken, newRefreshToken, refreshTokenExpiration));
                 });
     }
@@ -87,15 +87,15 @@ public class AuthService implements AuthUseCase {
     }
 
     private Mono<LoginResult> generateTokens(User user) {
-        String accessToken = tokenService.generateAccessToken(user.getId().getValue().toString());
-        String refreshToken = tokenService.generateRefreshToken(user.getId().getValue().toString());
+        String accessToken = tokenService.generateAccessToken(user.getId().value().toString());
+        String refreshToken = tokenService.generateRefreshToken(user.getId().value().toString());
 
-        return tokenService.storeRefreshToken(user.getId().getValue().toString(), refreshToken)
+        return tokenService.storeRefreshToken(user.getId().value().toString(), refreshToken)
                 .thenReturn(new LoginResult(
                         accessToken,
                         refreshToken,
                         refreshTokenExpiration,
-                        user.getId().getValue().toString(),
+                        user.getId().value().toString(),
                         user.getEmail(),
                         user.getNickname()
                 ));

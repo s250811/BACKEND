@@ -69,12 +69,12 @@ public class NotificationService implements NotificationUseCase {
         Task previousTask = currentTask.getPreviousTask();
 
         return Flux.fromIterable(currentTask.getManagerIds())
-                .filter(managerId -> !managerId.equals(currentTask.getLastModifiedBy()))
+                .filter(managerId -> !managerId.equals(currentTask.getLastModifiedBy().value()))
                 .flatMap(recipientId -> {
                     // 1. 새로운 매니저 배정 알림
                     if (isNewManagerAssigned(currentTask, previousTask, recipientId)) {
                         return createAndSaveNotification(TaskAssignedNotification.builder()
-                                .senderId(UserId.of(currentTask.getLastModifiedBy()))
+                                .senderId(UserId.of(currentTask.getLastModifiedBy().value()))
                                 .recipientId(UserId.of(recipientId))
                                 .isRead(false)
                                 .eventId(event.getId())
@@ -85,7 +85,7 @@ public class NotificationService implements NotificationUseCase {
                     // 2. 상태 변경 알림
                     if (currentTask.isStatusChanged(previousTask)) {
                         return createAndSaveNotification(TaskStatusChangedNotification.builder()
-                                .senderId(UserId.of(currentTask.getLastModifiedBy()))
+                                .senderId(UserId.of(currentTask.getLastModifiedBy().value()))
                                 .recipientId(UserId.of(recipientId))
                                 .isRead(false)
                                 .eventId(event.getId())
@@ -97,7 +97,7 @@ public class NotificationService implements NotificationUseCase {
                     String changedFields = currentTask.collectChangedFields(previousTask);
                     if (changedFields != null && !changedFields.trim().isEmpty()) {
                         return createAndSaveNotification(TaskFieldsChangedNotification.builder()
-                                .senderId(UserId.of(currentTask.getLastModifiedBy()))
+                                .senderId(UserId.of(currentTask.getLastModifiedBy().value()))
                                 .recipientId(UserId.of(recipientId))
                                 .isRead(false)
                                 .eventId(event.getId())
@@ -124,10 +124,10 @@ public class NotificationService implements NotificationUseCase {
         }
 
         return Flux.fromIterable(newMentions)
-                .filter(userId -> currentTask.getLastModifiedBy() != null && !userId.equals(currentTask.getLastModifiedBy()))
+                .filter(userId -> currentTask.getLastModifiedBy() != null && !userId.equals(currentTask.getLastModifiedBy().value()))
                 .flatMap(recipientId -> createAndSaveNotification(
                         TaskMentionInDescriptionNotification.builder()
-                                .senderId(UserId.of(currentTask.getLastModifiedBy()))
+                                .senderId(UserId.of(currentTask.getLastModifiedBy().value()))
                                 .recipientId(UserId.of(recipientId))
                                 .isRead(false)
                                 .eventId(event.getId())
@@ -151,14 +151,14 @@ public class NotificationService implements NotificationUseCase {
             return Mono.empty();
         }
 
-        return taskRepository.findById(comment.getTaskId().getValue())
+        return taskRepository.findById(comment.getTaskId().value())
                 .flatMapMany(task ->
                         Flux.fromIterable(comment.extractMentionedUserIds())
                                 .filter(mentionedUserId -> !mentionedUserId.equals(comment.getLastModifiedBy()))
                                 .flatMap(recipientId ->
                                         createAndSaveNotification(
                                                 CommentMentionNotification.builder()
-                                                        .senderId(UserId.of(comment.getLastModifiedBy()) )
+                                                        .senderId(UserId.of(comment.getLastModifiedBy().value()) )
                                                         .recipientId(UserId.of(recipientId))
                                                         .isRead(false)
                                                         .eventId(event.getId())
@@ -174,7 +174,7 @@ public class NotificationService implements NotificationUseCase {
         return notificationRepository.save(notification)
                 .doOnNext(savedNotification -> {
                     notificationStreamUseCase.sendToUser(
-                            savedNotification.getRecipientId().getValue(),
+                            savedNotification.getRecipientId().value(),
                             savedNotification
                     ).subscribe();
                 });

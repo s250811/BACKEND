@@ -31,7 +31,7 @@ public class EventAuditPersistenceAdapter implements EventAuditRepositoryPort {
     private EventAuditEntity toEntity(EventAudit eventAudit) {
         return EventAuditEntity.builder()
                 .id(eventAudit.getIdValue())
-                .eventId(eventAudit.getEventId().getValue())
+                .eventId(eventAudit.getEventId().value())
                 .eventType(eventAudit.getEventType().name())
                 .status(eventAudit.getStatus())
                 .errorMessage(eventAudit.getErrorMessage())

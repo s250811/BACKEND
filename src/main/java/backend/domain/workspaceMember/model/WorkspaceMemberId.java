@@ -1,18 +1,16 @@
 package backend.domain.workspaceMember.model;
 
 import backend.domain.common.ValueObject;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 
-@Getter
-public class WorkspaceMemberId extends ValueObject {
-
-    private final Long value;
-
-    public WorkspaceMemberId(Long value) {
+public record WorkspaceMemberId(Long value) implements ValueObject {
+    @JsonCreator
+    public WorkspaceMemberId(@JsonProperty("value") Long value) {
         this.value = value;
     }
-
-    public static WorkspaceMemberId of(Long id) {
-        return new WorkspaceMemberId(id);
+    public static WorkspaceMemberId of(Long value) {
+        return new WorkspaceMemberId(value);
     }
 }

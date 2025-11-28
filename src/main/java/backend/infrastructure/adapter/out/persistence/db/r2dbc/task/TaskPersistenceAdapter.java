@@ -33,7 +33,7 @@ public class TaskPersistenceAdapter implements TaskRepositoryPort {
 
     @Override
     public Flux<Task> findAllByProjectIdIn(List<ProjectId> projectIds) {
-        List<Long> ids = projectIds.stream().map(ProjectId::getValue).toList();
+        List<Long> ids = projectIds.stream().map(ProjectId::value).toList();
         return repository.findAllByProjectIdIn(ids)
                 .map(TaskPersistenceAdapter::toDomain);
     }

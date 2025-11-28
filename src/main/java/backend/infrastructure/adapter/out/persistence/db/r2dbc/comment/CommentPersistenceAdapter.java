@@ -19,11 +19,11 @@ public class CommentPersistenceAdapter implements CommentRepositoryPort {
     private CommentEntity toEntity(Comment comment){
         return CommentEntity.builder()
                 .id(comment.getIdValue())
-                .taskId(comment.getTaskId().getValue())
+                .taskId(comment.getTaskId().value())
                 .content(comment.getContent())
                 .createdAt(comment.getCreatedAt())
                 .updatedAt(comment.getUpdatedAt())
-                .lastModifiedBy(comment.getLastModifiedBy())
+                .lastModifiedBy(comment.getLastModifiedBy().value())
                 .build();
     }
 
@@ -47,12 +47,12 @@ public class CommentPersistenceAdapter implements CommentRepositoryPort {
 
     @Override
     public Mono<Comment> findById(CommentId id) {
-        return repository.findById(id.getValue())
+        return repository.findById(id.value())
                 .map(this::toDomain);
     }
     @Override
     public Flux<Comment> findByTaskId(TaskId taskId) {
-        return repository.findByTaskId(taskId.getValue())
+        return repository.findByTaskId(taskId.value())
                 .map(this::toDomain);
     }
 
@@ -63,6 +63,6 @@ public class CommentPersistenceAdapter implements CommentRepositoryPort {
 
     @Override
     public Mono<Void> deleteById(CommentId id) {
-        return repository.deleteById(id.getValue());
+        return repository.deleteById(id.value());
     }
 }

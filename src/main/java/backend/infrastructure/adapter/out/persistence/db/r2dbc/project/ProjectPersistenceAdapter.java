@@ -37,7 +37,7 @@ public class ProjectPersistenceAdapter implements ProjectRepositoryPort {
 
     @Override
     public Flux<Project> findAllByFolderIdIn(List<FolderId> folderIds) {
-        List<Long> ids = folderIds.stream().map(FolderId::getValue).toList();
+        List<Long> ids = folderIds.stream().map(FolderId::value).toList();
         return projectR2dbcRepository.findAllByFolderIdIn(ids)
                 .map(ProjectPersistenceAdapter::toDomain);
     }

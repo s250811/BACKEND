@@ -63,7 +63,7 @@ public class WorkspaceMemberPersistenceAdapter implements WorkspaceMemberReposit
         return WorkspaceMemberEntity.builder()
                 .id(workspaceMember.getIdValue())
                 .userId(workspaceMember.getUserIdValue())
-                .workspaceId(workspaceMember.getWorkspaceId().getValue())
+                .workspaceId(workspaceMember.getWorkspaceId().value())
                 .role(workspaceMember.getRole())
                 .isDeleted(workspaceMember.isDeleted())
                 .createdAt(workspaceMember.getCreatedAt())

@@ -49,16 +49,12 @@ public class Notification extends AggregateRoot<NotificationId> implements Seria
         this.message = message;
     }
     public Long getIdValue() {
-        return this.getId() != null ? this.getId().getValue() : null;
+        return this.getId() != null ? this.getId().value() : null;
     }
 
     public void markAsRead() {
         this.isRead = true;
         this.readAt = LocalDateTime.now();
-    }
-
-    public boolean isUnread() {
-        return !this.isRead;
     }
 
 }

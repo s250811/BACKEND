@@ -1,6 +1,7 @@
 package backend.infrastructure.adapter.out.messaging.kafka;
 
 import backend.application.port.out.messaging.EventProducerPort;
+import backend.domain.common.AggregateRoot;
 import backend.domain.common.ValueObject;
 import backend.domain.event.Event;
 import backend.domain.event.EventType;
@@ -29,9 +30,10 @@ public class KafkaEventProducer implements EventProducerPort {
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Override
-    public <T extends ValueObject & Serializable> Mono<Void> publishEvent(Event<T> event) {
+    public <ID extends ValueObject, T extends AggregateRoot<ID> & Serializable>
+    Mono<Void> publishEvent(Event<T> event) {
         T param = event.getParam();
-        String partitionKey = String.valueOf(param.getValue()); // 각 엔티티 순서 보장하기 위한 key
+        String partitionKey = String.valueOf(param.getId().value()); // 각 엔티티 순서 보장하기 위한 key
         List<String> topics = resolveTargetTopics(event);
 
         return Flux.fromIterable(topics)

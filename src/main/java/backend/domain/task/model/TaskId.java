@@ -6,17 +6,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-@Getter
-@NoArgsConstructor
-public class TaskId extends ValueObject {
-
-    private Long value;
+public record TaskId(Long value) implements ValueObject {
     @JsonCreator
-    public TaskId(Long value) {
+    public TaskId(@JsonProperty("value") Long value) {
         this.value = value;
     }
-
-    public static TaskId of(Long id) {
-        return new TaskId(id);
+    public static TaskId of(Long value) {
+        return new TaskId(value);
     }
 }

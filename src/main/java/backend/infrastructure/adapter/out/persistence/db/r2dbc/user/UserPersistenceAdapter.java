@@ -21,7 +21,7 @@ public class UserPersistenceAdapter implements UserRepositoryPort {
 
     @Override
     public Mono<User> findById(UserId userId) {
-        return repository.findById(userId.getValue())
+        return repository.findById(userId.value())
                 .map(this::toDomain);
     }
 
