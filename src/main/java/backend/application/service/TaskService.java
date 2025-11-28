@@ -4,11 +4,14 @@ import backend.application.port.in.task.TaskUseCase;
 import backend.application.port.out.messaging.EventProducerPort;
 import backend.application.port.out.task.TaskManagerRepositoryPort;
 import backend.application.port.out.task.TaskRepositoryPort;
+import backend.application.port.out.user.UserRepositoryPort;
 import backend.application.service.validation.TaskValidationService;
 import backend.domain.event.Event;
 import backend.domain.event.impl.TaskUpdatedEvent;
 import backend.domain.task.model.Task;
 import backend.domain.task.model.TaskManager;
+import backend.exception.task.TaskErrorCode;
+import backend.exception.task.TaskException;
 import backend.exception.workspace.WorkspaceErrorCode;
 import backend.exception.workspace.WorkspaceException;
 import jakarta.annotation.Nullable;
@@ -28,6 +31,7 @@ public class TaskService implements TaskUseCase {
     private final TaskRepositoryPort taskRepository;
     private final TaskManagerRepositoryPort taskManagerRepository;
     private final EventProducerPort eventPublisher;
+    private final UserRepositoryPort userRepository;
 
     @Override
     @Transactional
@@ -43,7 +47,7 @@ public class TaskService implements TaskUseCase {
                     .flatMap(newTask -> updateTaskWithManagers(newTask, command.managerIds()));
         } else {
             return taskRepository.findById(taskId)
-                    .switchIfEmpty(Mono.error(new WorkspaceException(WorkspaceErrorCode.TASK_NOT_FOUND)))
+                    .switchIfEmpty(Mono.error(new TaskException(TaskErrorCode.TASK_NOT_FOUND)))
                     .map(previousTask -> Task.merge(previousTask, command))
                     .flatMap(mergedTask -> updateTaskWithManagers(mergedTask, command.managerIds()));
         }
@@ -73,6 +77,43 @@ public class TaskService implements TaskUseCase {
 
     @Override
     public Mono<TaskDetailResult> getTaskDetail(Long taskId) {
-        return null; // TODO: 구현 필요
+        return taskRepository.findById(taskId)
+                .switchIfEmpty(Mono.error(new TaskException(TaskErrorCode.TASK_NOT_FOUND)))
+                .flatMap(task ->
+                        taskManagerRepository.findByTaskId(taskId)
+                                .map(TaskManager::getUserId)
+                                .collectList()
+                                .flatMap(managerIds -> {
+                                    if (managerIds.isEmpty()) {
+                                        return Mono.just(new TaskDetailResult(
+                                                task.getIdValue(),
+                                                task.getTaskName(),
+                                                task.getTaskStatus().name(),
+                                                task.getStartDate(),
+                                                task.getEndDate(),
+                                                task.getDescription(),
+                                                task.getFileUrl(),
+                                                List.of()
+                                        ));
+                                    }
+                                    return userRepository.findAllById(managerIds)
+                                            .map(user -> new TaskManagerResult(
+                                                    user.getIdValue(),
+                                                    user.getNickname(),
+                                                    user.getProfileImageUrl()
+                                            ))
+                                            .collectList()
+                                            .map(managers -> new TaskDetailResult(
+                                                    task.getIdValue(),
+                                                    task.getTaskName(),
+                                                    task.getTaskStatus().name(),
+                                                    task.getStartDate(),
+                                                    task.getEndDate(),
+                                                    task.getDescription(),
+                                                    task.getFileUrl(),
+                                                    managers
+                                            ));
+                                })
+                );
     }
 }

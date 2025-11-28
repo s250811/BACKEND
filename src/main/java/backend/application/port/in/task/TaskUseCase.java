@@ -34,7 +34,8 @@ public interface TaskUseCase {
 
     record TaskManagerResult(
             Long userId,
-            String nickname
+            String nickname,
+            String profileImageUrl
     ) {}
 
     Mono<Void> updateTask(@Nullable Long taskId, UpdateTaskCommand command);

@@ -15,13 +15,13 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1")
+@RequestMapping("/api/v1/tasks")
 public class TaskController {
 
     private final TaskUseCase taskUseCase;
 
     @Operation(summary = "태스크 생성")
-    @PostMapping("/tasks")
+    @PostMapping
     public Mono<ApiResponseDto<Void>> createTask(@RequestBody TaskRequest request) {
         TaskUseCase.UpdateTaskCommand command =
                 new TaskUseCase.UpdateTaskCommand(
@@ -41,7 +41,7 @@ public class TaskController {
     }
 
     @Operation(summary = "태스크 수정")
-    @PutMapping("/tasks/{taskId}") // Full Update
+    @PutMapping("/{taskId}") // Full Update
     public Mono<ApiResponseDto<Void>> updateTask(
             @PathVariable Long taskId,
             @RequestBody TaskRequest request) {
@@ -62,8 +62,8 @@ public class TaskController {
                 .then(Mono.just(ApiResponseDto.createSuccess(null, "태스크가 수정되었습니다.")));
     }
 
-    @Operation(summary = "태스크 상세 조회")
-    @GetMapping("/tasks/{taskId}")
+    @Operation(summary = "태스크 조회")
+    @GetMapping("/{taskId}")
     public Mono<ApiResponseDto<TaskDetailResponse>> getTaskDetail(@PathVariable Long taskId) {
         return taskUseCase.getTaskDetail(taskId)
                 .map(result -> new TaskDetailResponse(
@@ -75,7 +75,7 @@ public class TaskController {
                         result.description(),
                         result.fileUrl(),
                         result.managers().stream()
-                                .map(m -> new TaskDetailResponse.ManagerResponse(m.userId(), m.nickname()))
+                                .map(m -> new TaskDetailResponse.ManagerResponse(m.userId(), m.nickname(), m.profileImageUrl()))
                                 .toList()
                 ))
                 .map(response -> ApiResponseDto.createSuccess(response, "태스크 조회 완료"));
@@ -91,7 +91,7 @@ public class TaskController {
             String fileUrl,
             List<ManagerResponse> managers
     ) {
-        public record ManagerResponse(Long userId, String nickname) {}
+        public record ManagerResponse(Long userId, String nickname, String profileImgUrl) {}
     }
 
     public record TaskRequest(

@@ -5,6 +5,7 @@ import backend.domain.task.model.TaskManager;
 import backend.domain.task.model.TaskManagerId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Component
@@ -22,6 +23,13 @@ public class TaskManagerPersistenceAdapter implements TaskManagerRepositoryPort 
     @Override
     public Mono<Void> deleteByTaskId(Long taskId) {
         return repository.deleteByTaskId(taskId);
+    }
+
+
+    @Override
+    public Flux<TaskManager> findByTaskId(Long taskId) {
+        return repository.findAllByTaskId(taskId)
+                .map(TaskManagerPersistenceAdapter::toDomain);
     }
 
     public static TaskManager toDomain(TaskManagerEntity entity) {
