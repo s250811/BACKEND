@@ -1,8 +1,9 @@
 package backend.domain.common;
 
-import lombok.EqualsAndHashCode;
 
-@EqualsAndHashCode
-public abstract class ValueObject {
+import java.io.Serializable;
+
+public interface ValueObject extends Serializable {
+    Long value();
 }
 

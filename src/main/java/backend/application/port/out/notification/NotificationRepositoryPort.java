@@ -10,6 +10,5 @@ public interface NotificationRepositoryPort {
     Mono<Notification> findById(Long id);
     Flux<Notification> findByRecipientIdOrderByCreatedAtDesc(Long recipientId, int page, int size);
     Mono<Long> countUnreadByRecipientId(Long recipientId);
-    Mono<Void> deleteByIdAndRecipientId(Long id, Long recipientId);
 }
 

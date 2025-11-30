@@ -2,11 +2,14 @@ package backend.domain.comment.model;
 
 
 import backend.domain.common.ValueObject;
-import lombok.Value;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-@Value
-public class CommentId extends ValueObject {
-    Long value;
+public record CommentId(Long value) implements ValueObject {
+    @JsonCreator
+    public CommentId(@JsonProperty("value") Long value) {
+        this.value = value;
+    }
     public static CommentId of(Long id) {
         return new CommentId(id);
     }

@@ -1,8 +1,9 @@
 package backend.domain.task.model;
 
-import backend.application.port.in.TaskUseCase;
+import backend.application.port.in.task.TaskUseCase;
 import backend.domain.common.AggregateRoot;
 import backend.domain.common.ChangeDetector;
+import backend.domain.task.dto.request.UpdateTaskRequest;
 import backend.domain.user.model.UserId;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -35,10 +36,8 @@ public class Task extends AggregateRoot<TaskId> implements Serializable {
     private Task previousTask;
 
     public Long getIdValue() {
-        return this.id != null ? this.id.getValue() : null;
+        return this.id != null ? this.id.value() : null;
     }
-
-    public Long getLastModifiedBy() { return this.lastModifiedBy != null ? this.lastModifiedBy.getValue() : null;}
 
     public List<Long> extractMentionedUserIds() {
         if (description == null || description.isEmpty()) {
@@ -60,24 +59,20 @@ public class Task extends AggregateRoot<TaskId> implements Serializable {
         return ChangeDetector.getChangedFieldsAsString(previous, this, "previousTask", "managerIds", "taskStatus");
     }
 
-    public boolean hasDescriptionMentions() {
-        return !extractMentionedUserIds().isEmpty();
-    }
-
     // parentId가 없을 땐 0으로, 필수값 취급
-    public static Task merge(Task previousTask, TaskUseCase.UpdateTaskCommand command) {
+    public static Task merge(Task previousTask, UpdateTaskRequest request) {
         boolean isNew = previousTask == null;
         return Task.builder()
                 .id(isNew ? null : previousTask.getId())
-                .projectId(command.projectId())
-                .parentId(command.parentId() != 0 ? command.parentId() : null)
-                .taskName(command.taskName())
-                .taskStatus(TaskStatus.fromString(command.taskStatus()))
-                .description(command.description())
-                .managerIds(command.managerIds() != null ? command.managerIds() : List.of())
-                .fileUrl(command.fileUrl())
-                .startDate(command.startDate())
-                .endDate(command.endDate())
+                .projectId(request.projectId())
+                .parentId(request.parentId() != 0 ? request.parentId() : null)
+                .taskName(request.taskName())
+                .taskStatus(TaskStatus.fromString(request.taskStatus()))
+                .description(request.description())
+                .managerIds(request.managerIds() != null ? request.managerIds() : List.of())
+                .fileUrl(request.fileUrl())
+                .startDate(request.startDate())
+                .endDate(request.endDate())
                 .isDeleted(false)
                 .createdAt(isNew ? LocalDateTime.now() : previousTask.getCreatedAt())
                 .previousTask(isNew ? null : previousTask)

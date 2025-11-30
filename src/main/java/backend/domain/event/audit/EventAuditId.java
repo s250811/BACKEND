@@ -6,16 +6,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Data
-@NoArgsConstructor
-public class EventAuditId extends ValueObject {
-    Long value;
+public record EventAuditId(Long value) implements ValueObject {
     @JsonCreator
-    public EventAuditId(Long value) {
+    public EventAuditId(@JsonProperty("value") Long value) {
         this.value = value;
     }
-    public static EventAuditId of(Long id) {
-        return new EventAuditId(id);
+    public static EventAuditId of(Long value) {
+        return new EventAuditId(value);
     }
 }
 

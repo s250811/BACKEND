@@ -1,6 +1,6 @@
 package backend.infrastructure.adapter.out.email;
 
-import backend.application.port.out.common.EmailServicePort;
+import backend.application.port.out.email.EmailServicePort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.SimpleMailMessage;

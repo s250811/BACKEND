@@ -34,11 +34,9 @@ public class Comment extends AggregateRoot<CommentId> implements Serializable {
     }
 
     public Long getIdValue() {
-        return this.id != null ? this.id.getValue() : null;
+        return this.id != null ? this.id.value() : null;
     }
-    public Long getLastModifiedBy() {
-        return this.lastModifiedBy != null ? this.lastModifiedBy.getValue() : null;
-    }
+
     public void updateContent(String newContent) {
         this.content = newContent;
         this.updatedAt = LocalDateTime.now();

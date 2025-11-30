@@ -38,7 +38,7 @@ public class Workspace extends AggregateRoot<WorkspaceId> implements Serializabl
     }
 
     public Long getIdValue() {
-        return this.id != null ? this.id.getValue() : null;
+        return this.id != null ? this.id.value() : null;
     }
 
     public void updateWorkspaceName(String workspaceName) {

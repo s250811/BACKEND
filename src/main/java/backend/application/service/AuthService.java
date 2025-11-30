@@ -1,12 +1,15 @@
 package backend.application.service;
 
-import backend.application.port.in.AuthUseCase;
+import backend.application.port.in.auth.AuthUseCase;
 import backend.application.port.out.auth.MagicLinkPort;
 import backend.application.port.out.auth.PasswordEncodingPort;
 import backend.application.port.out.auth.TokenServicePort;
 import backend.application.port.out.auth.VerificationCodePort;
-import backend.application.port.out.common.EmailServicePort;
+import backend.application.port.out.email.EmailServicePort;
 import backend.application.port.out.user.*;
+import backend.domain.user.dto.requst.LoginRequest;
+import backend.domain.user.dto.response.LoginResponse;
+import backend.domain.user.dto.response.RefreshResponse;
 import backend.domain.user.model.*;
 import backend.exception.user.UserErrorCode;
 import backend.exception.user.UserException;
@@ -14,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+import reactor.util.function.Tuple3;
+import reactor.util.function.Tuples;
 
 @Service
 @RequiredArgsConstructor
@@ -39,17 +44,15 @@ public class AuthService implements AuthUseCase {
     private String magicLinkBaseUrl;
 
     @Override
-    public Mono<LoginResult> login(LoginCommand command) {
-        return userRepository.findByEmail(command.email())
+    public Mono<Tuple3<LoginResponse,String, Long>>  login(LoginRequest request) {
+        return userRepository.findByEmail(request.email())
                 .switchIfEmpty(Mono.error(new UserException(UserErrorCode.USER_NOT_FOUND)))
-                .flatMap(user -> validatePassword(user, command.password()))
+                .flatMap(user -> validatePassword(user, request.password()))
                 .flatMap(this::generateTokens);
     }
 
     @Override
-    public Mono<RefreshResult> refresh(RefreshCommand command) {
-        String refreshToken = command.refreshToken();
-
+    public Mono<RefreshResponse> refresh(String refreshToken) {
         String userId = tokenService.getUserIdFromToken(refreshToken);
 
         return tokenService.validateRefreshToken(userId, refreshToken)
@@ -64,15 +67,13 @@ public class AuthService implements AuthUseCase {
                     String newAccessToken = tokenService.generateAccessToken(user.getIdValue().toString());
                     String newRefreshToken = tokenService.generateRefreshToken(user.getIdValue().toString());
 
-                    return tokenService.storeRefreshToken(user.getId().getValue().toString(), newRefreshToken)
-                            .thenReturn(new RefreshResult(newAccessToken, newRefreshToken, refreshTokenExpiration));
+                    return tokenService.storeRefreshToken(user.getId().value().toString(), newRefreshToken)
+                            .thenReturn(new RefreshResponse(newAccessToken, newRefreshToken, refreshTokenExpiration / 1000));
                 });
     }
 
     @Override
-    public Mono<Void> logout(LogoutCommand command) {
-        String refreshToken = command.refreshToken();
-
+    public Mono<Void> logout(String refreshToken) {
         String userId = tokenService.getUserIdFromToken(refreshToken);
         return tokenService.deleteRefreshToken(userId);
     }
@@ -86,24 +87,22 @@ public class AuthService implements AuthUseCase {
         return Mono.just(user);
     }
 
-    private Mono<LoginResult> generateTokens(User user) {
-        String accessToken = tokenService.generateAccessToken(user.getId().getValue().toString());
-        String refreshToken = tokenService.generateRefreshToken(user.getId().getValue().toString());
+    private Mono<Tuple3<LoginResponse,String, Long>> generateTokens(User user) {
+        String accessToken = tokenService.generateAccessToken(user.getId().value().toString());
+        String refreshToken = tokenService.generateRefreshToken(user.getId().value().toString());
 
-        return tokenService.storeRefreshToken(user.getId().getValue().toString(), refreshToken)
-                .thenReturn(new LoginResult(
+        return tokenService.storeRefreshToken(user.getId().value().toString(), refreshToken)
+                .thenReturn(new LoginResponse(
                         accessToken,
-                        refreshToken,
-                        refreshTokenExpiration,
-                        user.getId().getValue().toString(),
+                        user.getId().value().toString(),
                         user.getEmail(),
                         user.getNickname()
-                ));
+                ))
+                .map(response -> Tuples.of(response, refreshToken, refreshTokenExpiration / 1000));
     }
 
     @Override
-    public Mono<Void> sendMagicLink(SendMagicLinkCommand command) {
-        String email = command.email();
+    public Mono<Void> sendMagicLink(String email) {
         return userRepository.existsByEmail(email)
                 .filter(exists -> exists)
                 .switchIfEmpty(Mono.error(new UserException(UserErrorCode.USER_NOT_FOUND)))
@@ -116,9 +115,7 @@ public class AuthService implements AuthUseCase {
     }
 
     @Override
-    public Mono<LoginResult> verifyMagicLink(VerifyMagicLinkCommand command) {
-        String token = command.token();
-
+    public Mono<Tuple3<LoginResponse,String, Long>> verifyMagicLink(String token) {
         return findEmailByMagicLinkToken(token)
                 .switchIfEmpty(Mono.error(new UserException(UserErrorCode.INVALID_MAGIC_LINK)))
                 .flatMap(email -> {
@@ -134,8 +131,7 @@ public class AuthService implements AuthUseCase {
     }
 
     @Override
-    public Mono<Void> sendVerificationCode(SendVerificationCodeCommand command) {
-        String email = command.email();
+    public Mono<Void> sendVerificationCode(String email) {
         return Mono.defer(() -> { // 구독 시점에 실행 (지연 계산)
                     String code = verificationCodePort.generateVerificationCode();
                     return verificationCodePort.storeVerificationCode(email, code, codeExpirationMs)

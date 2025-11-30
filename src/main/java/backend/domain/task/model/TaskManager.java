@@ -28,7 +28,7 @@ public class TaskManager extends AggregateRoot<TaskManagerId> {
     }
 
     public Long getIdValue() {
-        return this.id != null ? this.id.getValue() : null;
+        return this.id != null ? this.id.value() : null;
     }
 
 }

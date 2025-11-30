@@ -1,6 +1,6 @@
 package backend.infrastructure.config;
 
-import backend.infrastructure.config.Workspace.WorkspaceWebSocketHandler;
+import backend.infrastructure.adapter.in.web.socket.WebSocketHanlder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.HandlerMapping;
@@ -15,7 +15,7 @@ import java.util.Map;
 public class WebSocketConfig {
 
     @Bean
-    public HandlerMapping webSocketHandlerMapping(WorkspaceWebSocketHandler workspaceHandler) {
+    public HandlerMapping webSocketHandlerMapping(WebSocketHanlder workspaceHandler) {
         Map<String, WebSocketHandler> map = new HashMap<>();
         map.put("/ws/workspace/{workspaceId}", workspaceHandler);
 

@@ -1,8 +1,8 @@
 package backend.application.service.validation;
 
-import backend.application.port.in.WorkspaceUseCase.CreateWorkspaceCommand;
 import backend.application.port.out.workspace.WorkspaceMemberRepositoryPort;
 import backend.application.port.out.workspace.WorkspaceRepositoryPort;
+import backend.domain.workspace.dto.request.UpdateWorkspaceRequest;
 import backend.domain.workspaceMember.model.WorkspaceMemberRole;
 import backend.exception.workspace.WorkspaceErrorCode;
 import backend.exception.workspace.WorkspaceException;
@@ -17,9 +17,9 @@ public class WorkspaceBusinessValidator {
     private final WorkspaceRepositoryPort workspaceRepository;
     private final WorkspaceMemberRepositoryPort workspaceMemberRepository;
 
-    public Mono<CreateWorkspaceCommand> validateCreateWorkspace(CreateWorkspaceCommand command, Long userId) {
+    public Mono<UpdateWorkspaceRequest> validateCreateWorkspace(UpdateWorkspaceRequest request, Long userId) {
         return validateUserCanCreateWorkspace(userId)
-                .thenReturn(command);
+                .thenReturn(request);
     }
     /**
      * 사용자가 워크스페이스를 생성할 수 있는지 검증

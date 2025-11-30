@@ -1,7 +1,5 @@
 package backend.exception;
 
-import backend.exception.user.UserException;
-import backend.exception.workspace.WorkspaceException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -32,47 +30,23 @@ public class GlobalWebExceptionHandler implements WebExceptionHandler {
             return Mono.error(ex);
         }
 
-        if (ex instanceof WorkspaceException) {
-            return handleWorkspaceException(exchange, (WorkspaceException) ex);
-        } else if (ex instanceof UserException) {
-            return handleUserException(exchange, (UserException) ex);
+        if (ex instanceof ErrorCodeHolder holder) {
+            return handleErrorCodeException(exchange, holder.getErrorCode());
         }
 
         return Mono.error(ex);
     }
 
-    private Mono<Void> handleWorkspaceException(ServerWebExchange exchange, WorkspaceException ex) {
+    private Mono<Void> handleErrorCodeException(ServerWebExchange exchange, ErrorCode errorCode) {
         ServerHttpResponse response = exchange.getResponse();
 
         response.getHeaders().add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
-        response.setStatusCode(ex.getErrorCode().getHttpStatus());
+        response.setStatusCode(errorCode.getHttpStatus());
 
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .code(ex.getErrorCode().name())
-                .message(ex.getErrorCode().getMessage())
+                .code(errorCode.name())
+                .message(errorCode.getMessage())
                 .build();
-
-        log.warn("WorkspaceException: {} - Path: {}",
-                ex.getErrorCode().getMessage(),
-                exchange.getRequest().getPath().value());
-
-        return writeResponse(response, errorResponse);
-    }
-
-    private Mono<Void> handleUserException(ServerWebExchange exchange, UserException ex) {
-        ServerHttpResponse response = exchange.getResponse();
-
-        response.getHeaders().add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
-        response.setStatusCode(ex.getErrorCode().getHttpStatus());
-
-        ErrorResponse errorResponse = ErrorResponse.builder()
-                .code(ex.getErrorCode().name())
-                .message(ex.getErrorCode().getMessage())
-                .build();
-
-        log.warn("UserException: {} - Path: {}",
-                ex.getErrorCode().getMessage(),
-                exchange.getRequest().getPath().value());
 
         return writeResponse(response, errorResponse);
     }

@@ -1,6 +1,6 @@
 package backend.infrastructure.adapter.out.file;
 
-import backend.application.port.out.common.FileStoragePort;
+import backend.application.port.out.file.FileStoragePort;
 import backend.exception.file.FileErrorCode;
 import backend.exception.file.FileException;
 import backend.infrastructure.config.S3Config;

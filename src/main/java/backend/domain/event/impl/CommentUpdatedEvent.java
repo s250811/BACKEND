@@ -10,8 +10,4 @@ public class CommentUpdatedEvent extends Event<Comment> {
     public CommentUpdatedEvent(Comment param) {
         super(EventType.TASK_UPDATED, param);
     }
-    @Override
-    public String getPartitionKey() {
-        return getParam().getId().getValue().toString();
-    }
 }

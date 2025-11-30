@@ -1,6 +1,6 @@
 package backend.application.service.validation;
 
-import backend.application.port.in.TaskUseCase.UpdateTaskCommand;
+import backend.domain.task.dto.request.UpdateTaskRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
@@ -12,8 +12,8 @@ public class TaskValidationService {
     private final TaskSecurityValidator securityValidator;
     private final TaskHierarchyValidator hierarchyValidator;
 
-    public Mono<UpdateTaskCommand> validate(UpdateTaskCommand command) {
-        return Mono.just(command)
+    public Mono<UpdateTaskRequest> validate(UpdateTaskRequest request) {
+        return Mono.just(request)
                 .flatMap(securityValidator::validate)
                 .flatMap(hierarchyValidator::validate);
     }

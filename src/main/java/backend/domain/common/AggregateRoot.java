@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor
-public abstract class AggregateRoot<ID> {
+public abstract class AggregateRoot<ID extends ValueObject> {  // <-- 이 부분 추가!
     protected ID id;
     protected LocalDateTime createdAt;
     protected LocalDateTime updatedAt;

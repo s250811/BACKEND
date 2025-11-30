@@ -26,12 +26,28 @@ spring:
             enable: true
   kafka:
     bootstrap-servers: ec2-52-78-207-84.ap-northeast-2.compute.amazonaws.com:9092
+    topics:
+      real-time-events: real-time-events
+      notification-events: notification-events
+    producer:
+      acks: all # ISR(In-Sync Replica) 내 모든 복제본에 데이터가 기록되어야만 성공(commit)
+      retries: 3
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        enable.idempotence: true
+        spring.json.add.type.info.headers: true
     consumer:
       group-id: pm-backend
       auto-offset-reset: earliest # Consumer 재시작 시, 과거 데이터 포함해서 처리 (데이터 유실 방지)
-    producer:
-      acks: all  # ISR(In-Sync Replica) 내 모든 복제본에 데이터가 기록되어야만 성공(commit)
-      retries: 3
+      enable-auto-commit: false # auto commit 대신 manual commit을 사용하여 ack 호출 시점에 커밋 -> 데이터 유실 방지
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+    listener:
+      ack-mode: manual
+      concurrency: 3 # JVM 내 Consumer 스레드 개수 (파티션은 논리적 독립, 스레드는 물리적 독립)
 server:
   port: 8080
 management:

@@ -29,7 +29,7 @@ public class User extends AggregateRoot<UserId> {
     }
 
     public Long getIdValue() {
-        return this.id != null ? this.id.getValue() : null;
+        return this.id != null ? this.id.value() : null;
     }
 
     public void updateProfile(String nickname, String profileImageUrl) {
