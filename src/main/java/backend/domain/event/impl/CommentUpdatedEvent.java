@@ -7,7 +7,7 @@ import lombok.Builder;
 
 public class CommentUpdatedEvent extends Event<Comment> {
     @Builder
-    public CommentUpdatedEvent(Comment param) {
+    private CommentUpdatedEvent(Comment param) {
         super(EventType.TASK_UPDATED, param);
     }
 }

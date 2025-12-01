@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 
 public class WorkspaceUpdatedEvent extends Event<Workspace> {
     @Builder
-    public WorkspaceUpdatedEvent(Workspace param) {
+    private WorkspaceUpdatedEvent(Workspace param) {
         super(EventType.WORKSPACE_UPDATED, param);
     }
 }

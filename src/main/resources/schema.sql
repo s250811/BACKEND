@@ -191,8 +191,15 @@ CREATE TABLE IF NOT EXISTS event_audit (
                                            id BIGSERIAL PRIMARY KEY,
                                            event_id VARCHAR(255) NOT NULL,
     event_type VARCHAR(100) NOT NULL,
+    payload TEXT NOT NULL,
     status VARCHAR(50) NOT NULL,
-    CONSTRAINT status_check CHECK (status IN ('PROCESSING', 'SUCCESS', 'FAILED')),
+    CONSTRAINT status_check CHECK (status IN (
+                                   'PENDING',
+                                   'PROCESSING', -- Kafka 전송을 시도하기 직전에 PROCESSING으로 업데이트 (여러 Poller가 동시에 같은 이벤트를 가져가는 것을 방지 (낙관적 멱등 처리))
+                                   'PUBLISHED',
+                                   'FAILED_PUBLISH'
+                                             )),
+    retry_count INT DEFAULT 0,
     error_message TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

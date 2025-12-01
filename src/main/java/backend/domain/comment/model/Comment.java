@@ -22,7 +22,7 @@ public class Comment extends AggregateRoot<CommentId> implements Serializable {
     private UserId lastModifiedBy;
 
     @Builder
-    public Comment(CommentId id, TaskId taskId, String content, String fileUrl,
+    private Comment(CommentId id, TaskId taskId, String content, String fileUrl,
                    LocalDateTime createdAt, LocalDateTime updatedAt, UserId lastModifiedBy) {
         this.id = id;
         this.taskId = taskId;

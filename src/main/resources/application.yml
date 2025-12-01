@@ -12,6 +12,56 @@ spring:
       mode: always
       schema-locations: classpath:schema.sql
       continue-on-error: false
+  cloud:
+    function:
+      definition: notificationConsumer;notificationDlqConsumer;realTimeConsumer;realTimeDlqConsumer
+    stream:
+      bindings:
+        notificationConsumer-in-0:
+          destination: notification-events
+          group: main-process-group
+          consumer:
+            concurrency: 3
+            max-attempts: 3
+            auto-startup: true
+        notificationDlqConsumer-in-0:
+          destination: notification-events.dlq
+          group: dlq-reprocess-group
+          consumer:
+            concurrency: 1
+            max-attempts: 1
+            auto-startup: true
+        realTimeConsumer-in-0:
+          destination: real-time-events
+          group: main-process-group
+          consumer:
+            concurrency: 3
+            max-attempts: 3
+            auto-startup: true
+        realTimeDlqConsumer-in-0:
+          destination: real-time-events.dlq
+          group: dlq-reprocess-group
+          consumer:
+            concurrency: 1
+            max-attempts: 1
+            auto-startup: true
+      kafka:
+        binder:
+          brokers: ec2-52-78-207-84.ap-northeast-2.compute.amazonaws.com:9092
+          producer-properties:
+            acks: all # ISR(In-Sync Replica) 내 모든 복제본에 데이터가 기록되어야만 성공(commit)
+            retries: 3
+            enable.idempotence: true # 중복 전송 방지
+          consumer-properties:
+            auto.offset.reset: earliest  # Consumer 재시작 시, 과거 데이터 포함해서 처리
+            enable.auto.commit: false    # manual commit 사용
+            spring.json.value.default.type: backend.domain.event.Event
+            spring.json.use.type.headers: false
+            key.deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+            value.deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+            spring.json.trusted.packages: "*"
+            spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+            spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
 
   mail:
     host: smtp.gmail.com
@@ -24,30 +74,6 @@ spring:
           auth: true
           starttls:
             enable: true
-  kafka:
-    bootstrap-servers: ec2-52-78-207-84.ap-northeast-2.compute.amazonaws.com:9092
-    topics:
-      real-time-events: real-time-events
-      notification-events: notification-events
-    producer:
-      acks: all # ISR(In-Sync Replica) 내 모든 복제본에 데이터가 기록되어야만 성공(commit)
-      retries: 3
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      properties:
-        enable.idempotence: true
-        spring.json.add.type.info.headers: true
-    consumer:
-      group-id: pm-backend
-      auto-offset-reset: earliest # Consumer 재시작 시, 과거 데이터 포함해서 처리 (데이터 유실 방지)
-      enable-auto-commit: false # auto commit 대신 manual commit을 사용하여 ack 호출 시점에 커밋 -> 데이터 유실 방지
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: "*"
-    listener:
-      ack-mode: manual
-      concurrency: 3 # JVM 내 Consumer 스레드 개수 (파티션은 논리적 독립, 스레드는 물리적 독립)
 server:
   port: 8080
 management:

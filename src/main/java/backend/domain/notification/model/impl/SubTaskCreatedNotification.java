@@ -13,7 +13,7 @@ import org.apache.kafka.common.protocol.types.Field;
  */
 public class SubTaskCreatedNotification extends Notification {
     @Builder
-    public SubTaskCreatedNotification(NotificationId id, UserId senderId, UserId recipientId, Boolean isRead,
+    private SubTaskCreatedNotification(NotificationId id, UserId senderId, UserId recipientId, Boolean isRead,
                                       backend.domain.event.EventId eventId,
                                       java.time.LocalDateTime createdAt, java.time.LocalDateTime readAt,
                                       String message, Task param) {

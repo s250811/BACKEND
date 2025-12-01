@@ -17,17 +17,18 @@ import java.util.function.Function;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class KafkaNotificationConsumer {
+public class KafkaDlqNotificationConsumer {
     private final NotificationUseCase notificationUseCase;
     private final ObjectMapper objectMapper;
 
     /**
-     * Spring Cloud Stream Function
-     * - Flux<Message<Event>>를 받아서 처리
-     * - 성공/실패에 따라 자동으로 Ack/재시도/DLQ 처리
+     * DLQ 재처리 Consumer
+     * - 이미 3회 실패한 메시지를 재처리
+     * - 재처리 실패 시 메시지 제거 (무한 루프 방지)
+     * - 실패 로그 확인 후 수동 재발행 필요
      */
     @Bean
-    public Function<Flux<Message<String>>, Mono<Void>> notificationConsumer() {
+    public Function<Flux<Message<String>>, Mono<Void>> notificationDlqConsumer() {
         return flux -> flux
                 .flatMap(message -> {
                     Event event;
@@ -36,10 +37,17 @@ public class KafkaNotificationConsumer {
                     } catch (Exception e) {
                         return Mono.error(e);
                     }
+                    log.info("Notification DLQ 재처리 시작: eventId={}", event.getId());
 
                     return notificationUseCase.processEvent(event)
-                            .doOnSuccess(v -> log.info("Notification 이벤트 처리 성공: eventId={}", event.getId()))
-                            .doOnError(err -> log.error("Notification 이벤트 처리 실패: eventId={}", event.getId(), err));
+                            .doOnSuccess(v -> log.info("Notification DLQ 재처리 성공: eventId={}", event.getId()))
+                            .onErrorResume(error -> {
+                                log.error("Notification DLQ 재처리 최종 실패 (수동 확인 필요): eventId={}",
+                                        event.getId(), error);
+                                // DLQ의 DLQ는 없으므로 메시지 제거 (Ack)
+                                // 무한 재시도 방지 - 로그 확인 후 수동 재발행 필요
+                                return Mono.empty();
+                            });
                 })
                 .then();
     }

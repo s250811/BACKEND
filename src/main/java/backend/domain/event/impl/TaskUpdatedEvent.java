@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class TaskUpdatedEvent extends Event<Task> {
     @Builder
-    public TaskUpdatedEvent(Task param) {
+    private TaskUpdatedEvent(Task param) {
         super(EventType.TASK_UPDATED, param);
     }
 }

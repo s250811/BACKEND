@@ -19,7 +19,7 @@ public class TaskManager extends AggregateRoot<TaskManagerId> {
     private LocalDateTime updatedAt;
 
     @Builder
-    public TaskManager(TaskManagerId id, Long taskId, Long userId, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    private TaskManager(TaskManagerId id, Long taskId, Long userId, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.taskId = taskId;
         this.userId = userId;

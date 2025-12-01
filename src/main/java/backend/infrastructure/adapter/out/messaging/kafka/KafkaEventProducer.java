@@ -8,8 +8,8 @@ import backend.domain.event.EventType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Component;
-import org.springframework.kafka.core.KafkaTemplate;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -22,55 +22,32 @@ import java.util.List;
 @RequiredArgsConstructor
 public class KafkaEventProducer implements EventProducerPort {
 
-    @Value("${spring.kafka.topics.real-time-events}")
-    private String realTimeEventsTopic;
-    @Value("${spring.kafka.topics.notification-events}")
-    private String notificationEventsTopic;
+    private final StreamBridge streamBridge;
 
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    @Value("${spring.cloud.stream.bindings.realTimeConsumer-in-0.destination}")
+    private String realTimeEventsBinding;
+
+    @Value("${spring.cloud.stream.bindings.notificationConsumer-in-0.destination}")
+    private String notificationEventsBinding;
 
     @Override
     public <ID extends ValueObject, T extends AggregateRoot<ID> & Serializable>
     Mono<Void> publishEvent(Event<T> event) {
-        T param = event.getParam();
-        String partitionKey = String.valueOf(param.getId().value()); // 각 엔티티 순서 보장하기 위한 key
-        List<String> topics = resolveTargetTopics(event);
+        List<String> bindings = resolveTargetBindings(event);
 
-        return Flux.fromIterable(topics)
-                .flatMap(topic ->
-                        Mono.fromFuture(() -> kafkaTemplate.send(topic, partitionKey, event))
-                                .doOnSuccess(result -> log.debug("이벤트 발행 성공: topic={}, partition={}, offset={}, eventId={}",
-                                        topic,
-                                        result.getRecordMetadata().partition(),
-                                        result.getRecordMetadata().offset(),
-                                        event.getId()))
-                                .onErrorResume(throwable -> {
-                                    // Kafka Producer의 모든 retry가 실패한 후에만 실행됨
-                                    if (throwable instanceof org.apache.kafka.common.errors.TimeoutException ||
-                                            throwable instanceof org.apache.kafka.common.errors.RetriableException) {
-                                        log.error("이벤트 발행 최종 실패 (모든 retry 소진): topic={}, eventType={}, eventId={}",
-                                                topic, event.getType(), event.getId(), throwable);
-                                        // 비즈니스 로직에 영향을 주지 않도록 에러 무시
-                                        return Mono.empty();
-                                    }
-                                    // 다른 에러는 전파
-                                    return Mono.error(throwable);
-                                })
-                )
+        return Flux.fromIterable(bindings)
+                .flatMap(binding -> Mono.fromRunnable(() -> {
+                    streamBridge.send(binding, event);
+                }))
                 .then();
     }
 
-    private List<String> resolveTargetTopics(Event<?> event) {
-        List<String> topics = new ArrayList<>();
-
-        topics.add(realTimeEventsTopic);
-
-        EventType type = event.getType();
-        if (type == EventType.TASK_UPDATED || type == EventType.COMMENT_UPDATED) {
-            topics.add(notificationEventsTopic);
+    private List<String> resolveTargetBindings(Event<?> event) {
+        List<String> bindings = new ArrayList<>();
+        bindings.add(realTimeEventsBinding);
+        if (event.getType() == EventType.TASK_UPDATED || event.getType() == EventType.COMMENT_UPDATED) {
+            bindings.add(notificationEventsBinding);
         }
-
-        return topics;
+        return bindings;
     }
-
 }

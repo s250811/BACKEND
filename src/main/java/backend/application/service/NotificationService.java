@@ -2,12 +2,10 @@ package backend.application.service;
 
 import backend.application.port.in.notification.NotificationStreamUseCase;
 import backend.application.port.in.notification.NotificationUseCase;
-import backend.application.port.out.event.audit.EventAuditRepositoryPort;
 import backend.application.port.out.notification.NotificationRepositoryPort;
 import backend.application.port.out.task.TaskRepositoryPort;
 import backend.domain.comment.model.Comment;
 import backend.domain.event.Event;
-import backend.domain.event.audit.EventAudit;
 import backend.domain.event.impl.CommentUpdatedEvent;
 import backend.domain.event.impl.TaskUpdatedEvent;
 import backend.domain.notification.dto.response.NotificationDetailResponse;
@@ -30,31 +28,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class NotificationService implements NotificationUseCase {
     private final TaskRepositoryPort taskRepository;
-    private final EventAuditRepositoryPort eventAuditRepository;
     private final NotificationRepositoryPort notificationRepository;
     private final NotificationStreamUseCase notificationStreamUseCase;
 
     @Override
     @Transactional
     public <T extends Serializable> Mono<Void> processEvent(Event<T> event) {
-        EventAudit audit = EventAudit.createStarted(event.getId(), event.getType());
-
-        return eventAuditRepository.save(audit)
-                .flatMap(savedAudit -> processEventByType(event)
-                        .then(Mono.defer(() -> {
-                            savedAudit.markSuccess();
-                            return eventAuditRepository.save(savedAudit);
-                        }))
-                        .onErrorResume(error -> {
-                            savedAudit.markFailed(error.getMessage());
-                            return eventAuditRepository.save(savedAudit)
-                                    .then(Mono.error(error));
-                        })
-                )
-                .then();
-    }
-
-    private <T extends Serializable> Mono<Void> processEventByType(Event<T> event) {
         return switch (event) {
             case TaskUpdatedEvent taskEvent -> processTaskUpdatedEvent(taskEvent);
             case CommentUpdatedEvent commentEvent -> processCommentEvent(commentEvent);
@@ -108,7 +87,6 @@ public class NotificationService implements NotificationUseCase {
 
                     return Mono.empty();
                 })
-                .then()
                 .then(createMentionNotifications(event, currentTask, previousTask));
     }
 
@@ -174,6 +152,7 @@ public class NotificationService implements NotificationUseCase {
     private Mono<Notification> createAndSaveNotification(Notification notification) {
         return notificationRepository.save(notification)
                 .doOnNext(savedNotification -> {
+                    // SSE로 실시간 알림 전송
                     notificationStreamUseCase.sendToUser(
                             savedNotification.getRecipientId().value(),
                             savedNotification
