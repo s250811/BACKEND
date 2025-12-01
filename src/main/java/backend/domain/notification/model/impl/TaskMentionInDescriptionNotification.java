@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 public class TaskMentionInDescriptionNotification extends Notification {
 
     @Builder
-    public TaskMentionInDescriptionNotification(NotificationId id, UserId senderId, UserId recipientId, Boolean isRead, EventId eventId, NotificationType type, LocalDateTime createdAt, LocalDateTime readAt, String message, Task param) {
+    private TaskMentionInDescriptionNotification(NotificationId id, UserId senderId, UserId recipientId, Boolean isRead, EventId eventId, NotificationType type, LocalDateTime createdAt, LocalDateTime readAt, String message, Task param) {
         super(id, senderId, recipientId, isRead, eventId, type, createdAt, readAt, message, param);
     }
 

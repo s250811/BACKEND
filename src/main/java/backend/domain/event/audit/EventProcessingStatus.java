@@ -1,5 +1,5 @@
 package backend.domain.event.audit;
 
 public enum EventProcessingStatus {
-    PROCESSING, SUCCESS, FAILED
+    PENDING, PROCESSING, PUBLISHED, FAILED_PUBLISH
 }

@@ -18,7 +18,7 @@ public class Folder extends AggregateRoot<FolderId> {
     private LocalDateTime updatedAt;
 
     @Builder
-    public Folder(FolderId id,Long workspaceId, String folderName, boolean isDeleted, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    private Folder(FolderId id,Long workspaceId, String folderName, boolean isDeleted, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.workspaceId = workspaceId;
         this.folderName = folderName;

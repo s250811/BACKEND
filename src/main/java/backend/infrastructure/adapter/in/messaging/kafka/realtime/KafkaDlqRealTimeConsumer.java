@@ -16,13 +16,13 @@ import java.util.function.Function;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-public class KafkaRealTimeConsumer {
+public class KafkaDlqRealTimeConsumer {
 
     private final RealTimeUseCase realTimeUseCase;
     private final ObjectMapper objectMapper;
 
     @Bean
-    public Function<Flux<Message<String>>, Mono<Void>> realTimeConsumer() {
+    public Function<Flux<Message<String>>, Mono<Void>> realTimeDlqConsumer() {
         return flux -> flux
                 .flatMap(message -> {
                     Event event;
@@ -33,12 +33,16 @@ public class KafkaRealTimeConsumer {
                     }
                     Long workspaceId = message.getHeaders().get("workspaceId", Long.class);
 
+                    log.info("Real-Time DLQ 재처리 시작: eventId={}, workspaceId={}", event.getId(), workspaceId);
+
                     return realTimeUseCase.processEvent(event, workspaceId)
-                            .doOnSuccess(v -> log.info("Real-Time 이벤트 처리 성공: eventId={}, workspaceId={}", event.getId(), workspaceId))
-                            .doOnError(error -> {
-                                log.error("Real-Time 이벤트 처리 실패: eventId={}, workspaceId={}", event.getId(), workspaceId, error);
-                                // 예외 던지면 Spring Cloud Stream이 재시도 → DLQ 처리
-                                throw new RuntimeException(error);
+                            .doOnSuccess(v -> log.info("Real-Time DLQ 재처리 성공: eventId={}", event.getId()))
+                            .onErrorResume(error -> {
+                                log.error("Real-Time DLQ 재처리 실패 (수동 재발행 필요): eventId={}",
+                                        event.getId(), error);
+                                // DLQ의 DLQ는 없으므로 메시지 제거 (Ack)
+                                // 무한 재시도 방지 - 로그 확인 후 수동 재발행 필요
+                                return Mono.empty();
                             });
                 })
                 .then();

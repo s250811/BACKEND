@@ -18,7 +18,7 @@ public class Workspace extends AggregateRoot<WorkspaceId> implements Serializabl
     private LocalDateTime updatedAt;
 
     @Builder
-    public Workspace(WorkspaceId id, String workspaceName, String workspaceImgUrl, String description, boolean isDeleted, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    private Workspace(WorkspaceId id, String workspaceName, String workspaceImgUrl, String description, boolean isDeleted, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.workspaceName = workspaceName;
         this.workspaceImgUrl = workspaceImgUrl;

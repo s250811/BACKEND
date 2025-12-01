@@ -24,6 +24,8 @@ repositories {
 }
 
 dependencies {
+    implementation platform('org.springframework.cloud:spring-cloud-dependencies:2024.0.2')
+
     // Core Spring Boot WebFlux Stack
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
     implementation 'org.springframework.boot:spring-boot-starter-security'
@@ -48,9 +50,8 @@ dependencies {
     implementation 'software.amazon.awssdk:netty-nio-client:2.20.26'
 
     // Kafka
-    implementation 'org.springframework.kafka:spring-kafka'
-    implementation 'org.apache.kafka:kafka-clients:3.8.1'
-
+    implementation 'org.springframework.cloud:spring-cloud-stream'
+    implementation 'org.springframework.cloud:spring-cloud-stream-binder-kafka'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'

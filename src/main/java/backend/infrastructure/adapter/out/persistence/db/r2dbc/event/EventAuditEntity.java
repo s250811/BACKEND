@@ -20,9 +20,10 @@ public class EventAuditEntity implements Persistable<Long> {
 
     @Id
     private Long id;
-
     private Long eventId;
     private String eventType;
+    private String payload;
+    private Integer retryCount;
     private EventProcessingStatus status;
     private String errorMessage;
     @LastModifiedDate

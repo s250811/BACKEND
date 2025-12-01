@@ -22,7 +22,7 @@ public class WorkspaceMember extends AggregateRoot<WorkspaceMemberId> {
     private LocalDateTime updatedAt;
 
     @Builder
-    public WorkspaceMember(WorkspaceMemberId id, WorkspaceId workspaceId, UserId userId,
+    private WorkspaceMember(WorkspaceMemberId id, WorkspaceId workspaceId, UserId userId,
                            String description, WorkspaceMemberRole role,
                            boolean isDeleted, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;

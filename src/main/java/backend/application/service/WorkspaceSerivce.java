@@ -1,6 +1,7 @@
 package backend.application.service;
 
 import backend.application.port.in.workspace.WorkspaceUseCase;
+import backend.application.port.out.event.audit.EventAuditRepositoryPort;
 import backend.application.port.out.messaging.EventProducerPort;
 import backend.application.port.out.folder.FolderRepositoryPort;
 import backend.application.port.out.project.ProjectRepositoryPort;
@@ -10,6 +11,9 @@ import backend.application.port.out.workspace.WorkspaceMemberRepositoryPort;
 import backend.application.port.out.workspace.WorkspaceRepositoryPort;
 import backend.application.service.validation.WorkspaceValidationService;
 import backend.domain.event.Event;
+import backend.domain.event.EventId;
+import backend.domain.event.audit.EventAudit;
+import backend.domain.event.impl.TaskUpdatedEvent;
 import backend.domain.event.impl.WorkspaceUpdatedEvent;
 import backend.domain.folder.model.Folder;
 import backend.domain.folder.model.FolderId;
@@ -27,6 +31,8 @@ import backend.domain.workspaceMember.model.WorkspaceMemberRole;
 import backend.exception.workspace.WorkspaceErrorCode;
 import backend.exception.workspace.WorkspaceException;
 import backend.infrastructure.security.SecurityUtils;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -43,6 +49,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class WorkspaceSerivce implements WorkspaceUseCase {
+    //todo: 수정필요
 
     private final UserRepositoryPort userRepository;
     private final WorkspaceRepositoryPort workspaceRepository;
@@ -51,7 +58,8 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
     private final ProjectRepositoryPort projectRepository;
     private final TaskRepositoryPort taskRepository;
     private final WorkspaceValidationService validationService;
-    private final EventProducerPort eventPublisher;
+    private final EventAuditRepositoryPort eventAuditRepository;
+    private final ObjectMapper objectMapper;
 
     /**
      * Workspace 생성 및 수정 Service layer
@@ -74,7 +82,7 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                 .flatMap(this::saveWorkspace)
                 .flatMap(savedWorkspace ->
                         saveWorkspaceMember(savedWorkspace)
-                                .then(publishWorkspaceUpdatedEvent(savedWorkspace))
+                                .then(saveWorkspaceEventToOutbox(savedWorkspace))
                 );
     }
 
@@ -96,17 +104,25 @@ public class WorkspaceSerivce implements WorkspaceUseCase {
                                     return workspaceRepository.save(existingWorkspace);
                                 })
                                 .flatMap(savedWorkspace ->
-                                        publishWorkspaceUpdatedEvent(savedWorkspace))
+                                        saveWorkspaceEventToOutbox(savedWorkspace))
                 );
     }
 
-    private Mono<Void> publishWorkspaceUpdatedEvent(Workspace workspace) {
-        Event event = WorkspaceUpdatedEvent.builder()
-                .param(workspace)
-                .build();
-        return eventPublisher.publishEvent(event);
+    // Outbox에 이벤트 저장 (트랜잭션 내부)
+    private Mono<Void> saveWorkspaceEventToOutbox(Workspace savedWorkspace) {
+        try {
+            Event event = WorkspaceUpdatedEvent.builder().param(savedWorkspace).build();
+            String payload = objectMapper.writeValueAsString(event);
+            EventAudit audit = EventAudit.createPending(
+                    EventId.of(event.getId().value()),
+                    event.getType(),
+                    payload
+            );
+            return eventAuditRepository.save(audit).then();
+        } catch (JsonProcessingException e) {
+            return Mono.error(new RuntimeException(e));
+        }
     }
-
     // 워크스페이스 저장
     private Mono<Workspace> saveWorkspace(UpdateWorkspaceRequest request) {
         Workspace workspace = Workspace.builder()

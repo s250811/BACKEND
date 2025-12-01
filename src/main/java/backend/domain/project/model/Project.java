@@ -26,7 +26,7 @@ public class Project extends AggregateRoot<ProjectId> {
     private LocalDateTime updatedAt;
 
     @Builder
-    public Project(ProjectId id, Long folderId, String projectName, String description,
+    private Project(ProjectId id, Long folderId, String projectName, String description,
                    boolean isDeleted, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.folderId = folderId;

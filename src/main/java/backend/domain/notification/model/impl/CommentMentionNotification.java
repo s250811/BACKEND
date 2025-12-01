@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
  */
 public class CommentMentionNotification extends Notification {
     @Builder
-    public CommentMentionNotification(NotificationId id, UserId senderId, UserId recipientId, Boolean isRead,
+    private CommentMentionNotification(NotificationId id, UserId senderId, UserId recipientId, Boolean isRead,
                                       EventId eventId, LocalDateTime createdAt, LocalDateTime readAt,
                                       String message, Task param) {
         super(id, senderId, recipientId, isRead, eventId, NotificationType.MENTION_IN_COMMENT, createdAt, readAt, message, param);
