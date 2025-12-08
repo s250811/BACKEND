@@ -1,4 +1,4 @@
-package backend.infrastructure.adapter.out.persistence.db.r2dbc.event;
+package backend.infrastructure.adapter.out.persistence.db.r2dbc.event.audit;
 
 import backend.application.port.out.event.audit.EventAuditRepositoryPort;
 import backend.domain.event.EventId;

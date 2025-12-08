@@ -1,4 +1,4 @@
-package backend.infrastructure.adapter.out.persistence.db.r2dbc.event;
+package backend.infrastructure.adapter.out.persistence.db.r2dbc.event.audit;
 
 import backend.domain.event.audit.EventProcessingStatus;
 import lombok.*;
