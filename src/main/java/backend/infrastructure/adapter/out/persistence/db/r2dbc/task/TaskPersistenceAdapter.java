@@ -41,7 +41,7 @@ public class TaskPersistenceAdapter implements TaskRepositoryPort {
 
     @Override
     public Flux<Task> findAllCompletedTasks() {
-        return repository.findAllByTaskStatusAndIsDeletedAndStartDateIsNotNullAndEndDateIsNotNull(
+        return repository.findAllByTaskStatusAndIsDeletedAndStartDateIsNotNullAndEndDateIsNotNullOrderByUpdatedAtDesc(
                         TaskStatus.DONE,
                         false
                 )

@@ -10,5 +10,5 @@ import java.util.List;
 public interface TaskR2dbcRepository extends R2dbcRepository<TaskEntity, Long> {
     Mono<TaskEntity> findById(Long id);
     Flux<TaskEntity> findAllByProjectIdIn(List<Long> projectIds);
-    Flux<TaskEntity> findAllByTaskStatusAndIsDeletedAndStartDateIsNotNullAndEndDateIsNotNull(TaskStatus taskStatus, Boolean isDeleted);
+    Flux<TaskEntity> findAllByTaskStatusAndIsDeletedAndStartDateIsNotNullAndEndDateIsNotNullOrderByUpdatedAtDesc(TaskStatus taskStatus, Boolean isDeleted);
 }

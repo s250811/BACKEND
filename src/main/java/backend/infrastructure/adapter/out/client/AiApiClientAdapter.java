@@ -11,6 +11,7 @@ import backend.domain.task.model.Task;
 import backend.domain.task.model.TaskPrediction;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 public class AiApiClientAdapter implements TaskHistoryPort, TaskPredictionPort {
     private final WebClient webClient;
     private final TaskRepositoryPort taskRepositoryPort;
+    private static final int BATCH_SIZE = 50;
 
     public AiApiClientAdapter(
             @Value("${ai.api.base-url}") String baseUrl,
@@ -32,14 +34,26 @@ public class AiApiClientAdapter implements TaskHistoryPort, TaskPredictionPort {
         this.webClient = webClientBuilder.baseUrl(baseUrl).build();
         this.taskRepositoryPort = taskRepositoryPort;
     }
+
     @Override
-    public Mono<TaskPrediction> predictDuration(String taskName, String description, Long assigneeId, Integer topK) {
+    @Cacheable(
+            value = "task:prediction",
+            key = "#taskName + ':' + #assigneeId + ':' + #topK",
+            unless = "#result == null"
+    )
+    public Mono<TaskPrediction> predictDuration(
+            String taskName,
+            String description,
+            Long assigneeId,
+            Integer topK) {
+
         var request = PredictTaskRequest.builder()
                 .taskName(taskName)
                 .description(description)
                 .assigneeId(assigneeId)
                 .similarTaskCount(topK)
                 .build();
+
         return webClient.post()
                 .uri("/api/v1/tasks/predict")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -56,22 +70,30 @@ public class AiApiClientAdapter implements TaskHistoryPort, TaskPredictionPort {
     public Mono<Void> syncTaskHistoryToAi() {
         return taskRepositoryPort.findAllCompletedTasks()
                 .map(this::toHistoryItem)
-                .collectList()
-                .flatMap(tasks -> {
-                    if (tasks.isEmpty()) {
-                        return Mono.empty();
-                    }
+                .buffer(BATCH_SIZE)
+                .index()
+                .concatMap(tuple -> {
+                    int batchNumber = tuple.getT1().intValue() + 1;
+                    List<TaskHistoryItemResponse> batch = tuple.getT2();
+                    return syncBatch(batch, batchNumber);
+                })
+                .then();
+    }
 
-                    return webClient.post()
-                            .uri("/api/v1/tasks/history/sync")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .bodyValue(tasks)
-                            .retrieve()
-                            .bodyToMono(Void.class)
-                            .doOnSuccess(v ->
-                                    log.info("Synced {} tasks to AI server", tasks.size())
-                            );
-                });
+    private Mono<Void> syncBatch(List<TaskHistoryItemResponse> batch, int batchNumber) {
+        // 정렬해서 넘어오므로 task id만으로 범위 확인 가능
+        long firstTaskId = batch.get(0).id();
+        long lastTaskId  = batch.get(batch.size() - 1).id();
+        return webClient.post()
+                .uri("/api/v1/tasks/history/sync")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(batch)
+                .retrieve()
+                .bodyToMono(Void.class)
+                .doOnError(error ->
+                        log.error("Batch {} sync failed ({} tasks: idRange {}~{})", batchNumber, batch.size(), firstTaskId, lastTaskId, error)
+                )
+                .onErrorResume(error -> Mono.empty()); // 실패 배치 스킵
     }
 
     private TaskPrediction toDomain(PredictTaskResponse response) {
@@ -109,5 +131,4 @@ public class AiApiClientAdapter implements TaskHistoryPort, TaskPredictionPort {
                 .endDate(task.getEndDate())
                 .build();
     }
-
 }
