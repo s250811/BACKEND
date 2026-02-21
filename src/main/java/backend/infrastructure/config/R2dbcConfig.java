@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @Configuration
 @EnableR2dbcRepositories(basePackages = "backend.infrastructure.adapter.out.persistence")
 @EnableR2dbcAuditing
-@EnableTransactionManagement
 @Slf4j
 public class R2dbcConfig {
     @Bean

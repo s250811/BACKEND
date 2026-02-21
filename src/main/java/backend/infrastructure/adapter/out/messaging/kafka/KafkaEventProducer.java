@@ -5,6 +5,8 @@ import backend.domain.common.AggregateRoot;
 import backend.domain.common.ValueObject;
 import backend.domain.event.Event;
 import backend.domain.event.EventType;
+import backend.exception.messaging.MessagingErrorCode;
+import backend.exception.messaging.MessagingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,7 +39,10 @@ public class KafkaEventProducer implements EventProducerPort {
 
         return Flux.fromIterable(bindings)
                 .flatMap(binding -> Mono.fromRunnable(() -> {
-                    streamBridge.send(binding, event);
+                    boolean channelSendSucceeded = streamBridge.send(binding, event);
+                    if (!channelSendSucceeded) {
+                        throw new MessagingException(MessagingErrorCode.MESSAGE_DISPATCH_FAILED);
+                    }
                 }))
                 .then();
     }
