@@ -4,6 +4,7 @@ import backend.application.port.out.task.TaskRepositoryPort;
 import backend.domain.project.model.ProjectId;
 import backend.domain.task.model.Task;
 import backend.domain.task.model.TaskId;
+import backend.domain.task.model.TaskStatus;
 import backend.domain.user.model.UserId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -35,6 +36,15 @@ public class TaskPersistenceAdapter implements TaskRepositoryPort {
     public Flux<Task> findAllByProjectIdIn(List<ProjectId> projectIds) {
         List<Long> ids = projectIds.stream().map(ProjectId::value).toList();
         return repository.findAllByProjectIdIn(ids)
+                .map(TaskPersistenceAdapter::toDomain);
+    }
+
+    @Override
+    public Flux<Task> findAllCompletedTasks() {
+        return repository.findAllByTaskStatusAndIsDeletedAndStartDateIsNotNullAndEndDateIsNotNullOrderByUpdatedAtDesc(
+                        TaskStatus.DONE,
+                        false
+                )
                 .map(TaskPersistenceAdapter::toDomain);
     }
 

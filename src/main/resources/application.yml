@@ -12,6 +12,11 @@ spring:
       mode: always
       schema-locations: classpath:schema.sql
       continue-on-error: false
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000 # 1시간
+      cache-null-values: false
   cloud:
     function:
       definition: notificationConsumer;notificationDlqConsumer;realTimeConsumer;realTimeDlqConsumer
@@ -87,7 +92,9 @@ management:
 
 verification:
   code-expiration: ${VERIFICATION_CODE_EXPIRATION:60000}          # 1분 (인증코드 만료기간)
-
+ai:
+    api:
+      base-url: http://ec2-52-78-207-84.ap-northeast-2.compute.amazonaws.com:8001
 logging:
   level:
     backend: DEBUG
