@@ -5,5 +5,5 @@ import org.springframework.data.r2dbc.repository.R2dbcRepository;
 import reactor.core.publisher.Flux;
 
 public interface EventAuditR2dbcRepository extends R2dbcRepository<EventAuditEntity, Long> {
-    Flux<EventAuditEntity> findByStatusAndRetryCountLessThanOrderByCreatedAtAsc(EventProcessingStatus status, int retryCount);
+    Flux<EventAuditEntity> findTop50ByStatusAndRetryCountLessThanOrderByCreatedAtAsc(EventProcessingStatus status, int retryCount);
 }

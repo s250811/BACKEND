@@ -33,7 +33,7 @@ public class EventAuditPersistenceAdapter implements EventAuditRepositoryPort {
 
     @Override
     public Flux<EventAudit> findPendingEvents() {
-        return repository.findByStatusAndRetryCountLessThanOrderByCreatedAtAsc(EventProcessingStatus.PENDING, MAX_RETRY)
+        return repository.findTop50ByStatusAndRetryCountLessThanOrderByCreatedAtAsc(EventProcessingStatus.PENDING, MAX_RETRY)
                 .map(this::toDomain);
     }
 
