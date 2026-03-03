@@ -26,28 +26,24 @@ spring:
           destination: notification-events
           group: main-process-group
           consumer:
-            concurrency: 3
             max-attempts: 3
             auto-startup: true
         notificationDlqConsumer-in-0:
           destination: notification-events.dlq
           group: dlq-reprocess-group
           consumer:
-            concurrency: 1
             max-attempts: 1
             auto-startup: true
         realTimeConsumer-in-0:
           destination: real-time-events
           group: main-process-group
           consumer:
-            concurrency: 3
             max-attempts: 3
             auto-startup: true
         realTimeDlqConsumer-in-0:
           destination: real-time-events.dlq
           group: dlq-reprocess-group
           consumer:
-            concurrency: 1
             max-attempts: 1
             auto-startup: true
       kafka:
