@@ -11,6 +11,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.stream.function.StreamBridge;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -25,7 +28,7 @@ import java.util.List;
 public class KafkaEventProducer implements EventProducerPort {
 
     private final StreamBridge streamBridge;
-
+    // consumer binding에 정의된 destination(topic 이름)을 주입받아 StreamBridge에 전달하면 Spring Cloud Stream은 동적으로 producer binding을 생성하여 해당 topic으로 메시지를 전송.
     @Value("${spring.cloud.stream.bindings.realTimeConsumer-in-0.destination}")
     private String realTimeEventsBinding;
 
@@ -35,12 +38,21 @@ public class KafkaEventProducer implements EventProducerPort {
     @Override
     public <ID extends ValueObject, T extends AggregateRoot<ID> & Serializable>
     Mono<Void> publishEvent(Event<T> event) {
+        T param = event.getParam();
+        // Kafka partitioner는 key의 hash를 계산해서 partition을 결정하기 때문에 동일 엔티티의 이벤트 순서 보장하기 위해 엔티티 고유 ID를 Kafka record key로 전달.
+        String partitionKey = String.valueOf(param.getId().value());
+
         List<String> bindings = resolveTargetBindings(event);
 
         return Flux.fromIterable(bindings)
                 .flatMap(binding -> Mono.fromRunnable(() -> {
-                    boolean channelSendSucceeded = streamBridge.send(binding, event);
-                    if (!channelSendSucceeded) {
+                    Message<Event<T>> msgWithPartitionKey = MessageBuilder.withPayload(event)
+                                    //  KafkaHeaders.KEY는 Kafka ProducerRecord의 key로 매핑.
+                                    .setHeader(KafkaHeaders.KEY, partitionKey)
+                                    .build();
+                    // 반환값(boolean)은 Spring Cloud Stream 내부 채널 전송 성공 여부이며, Kafka 브로커에 브로커에 실제로 기록(ack)되었는지는 보장하지 않음.
+                    boolean sentToBinder = streamBridge.send(binding, msgWithPartitionKey);
+                    if (!sentToBinder) {
                         throw new MessagingException(MessagingErrorCode.MESSAGE_DISPATCH_FAILED);
                     }
                 }))
