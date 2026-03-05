@@ -22,9 +22,11 @@ public class KafkaNotificationConsumer {
     private final ObjectMapper objectMapper;
 
     /**
-     * Spring Cloud Stream Function
-     * - Flux<Message<Event>>를 받아서 처리
-     * - 성공/실패에 따라 자동으로 Ack/재시도/DLQ 처리
+     * Spring Cloud Stream Functional Consumer
+     * - notificationConsumer 함수는 자동으로 notificationConsumer-in-0' binding과 연결된다.
+     * - 해당 binding의 destination(notification-events)을 구독한다.
+     * - 예외 발생 시 max-attempts 설정에 따라 재시도되며, 재시도 실패 시 DLQ(notification-events.dlq)로 전달된다.
+     * - offset commit은 binder 설정(enable.auto.commit=false)에 따라 처리 성공 시점에 관리된다.
      */
     @Bean
     public Function<Flux<Message<String>>, Mono<Void>> notificationConsumer() {
